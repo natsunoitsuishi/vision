@@ -50,6 +50,9 @@ class CameraResult:
     # 可选：消息类型 (固定为 "scan_result")
     type: str = "scan_result"
 
+    # 可选：payload 负载, 原始报文，用于调试
+    raw_payload: Optional[dict] = None
+
     @property
     def is_success(self) -> bool:
         """判断是否扫码成功"""
