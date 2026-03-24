@@ -6,7 +6,10 @@ from typing import Optional, Dict, List
 
 from PySide6.QtWidgets import QApplication
 from qasync import QEventLoop
+
+from config import get_config
 from config.manager import load_config
+from devices import SchedulerClient, MesClient
 from devices.camera import OptCameraClient
 from devices.photoelectric import PhotoelectricClient
 from domain.binder import ResultBinder
@@ -90,7 +93,8 @@ class AppController:
         self.decision_engine: Optional[DecisionEngine] = None
 
         # 对外接口
-        # self.scheduler_client: Optional[SchedulerClient] = None
+        self.scheduler_client: Optional[SchedulerClient] = None
+        self.mes_client: Optional[MesClient] = None
 
         # 运行时服务
         self.runtime_service: Optional[RuntimeService] = None
@@ -171,10 +175,27 @@ class AppController:
             self.result_binder = ResultBinder()
             self.decision_engine = DecisionEngine()
 
-            ## 4. 对外接口层 - 依赖配置和业务模块
-            # await self._init_scheduler_client()
-            #
-            ## 5. 运行时服务层 - 整合所有模块，启动核心业务循环
+            # 4. 对外接口层 - 依赖配置和业务模块
+            # 创建调度客户端
+            self.scheduler_client = SchedulerClient(
+                host=get_config("scheduler_client_host", "127.0.0.1"),
+                port=get_config("scheduler_client_port", 8080),
+                device_id=get_config("app.scheduler_client_id", "VG-01")
+            )
+            await self.scheduler_client.connect()
+            self.logger.info("调度上位机客户端已启动")
+
+            # 创建 MES 客户端
+            self.mes_client = MesClient(
+                host=get_config("mes_host", "127.0.0.1"),
+                port=get_config("mes_port", 9090),
+                device_id=get_config("app.mes_client_id", "VG-01"),
+                line_id=get_config("app.line_id", "LINE-01")
+            )
+            await self.mes_client.connect()
+            self.logger.info("MES 客户端已启动")
+
+            # 5. 运行时服务层 - 整合所有模块，启动核心业务循环
             self.state = AppState.INIT_RUNTIME
             self.runtime_service = RuntimeService(
                 self.event_bus,
@@ -185,7 +206,9 @@ class AppController:
                 self.decision_engine,
                 self.photoelectric_client,
                 self.cameras,
-                self.repository
+                self.repository,
+                self.scheduler_client,
+                self.mes_client,
             )
             await self.runtime_service.start()
 
@@ -200,9 +223,6 @@ class AppController:
             # 8. 启动完成
             self.state = AppState.READY
             self.logger.info("Application startup completed successfully")
-
-            # 9. 启动运行时服务（开始处理业务）
-            # await self._start_runtime()
 
             self.state = AppState.RUNNING
             self.logger.info("Application is now running")

@@ -6,8 +6,10 @@ import asyncio
 import logging
 import time
 from typing import Optional, Dict
+from datetime import datetime
 
 from config.manager import get_config
+from devices import MesClient, SchedulerClient
 from devices.camera import OptCameraClient
 from devices.photoelectric import PhotoelectricClient
 from domain.binder import ResultBinder
@@ -42,7 +44,9 @@ class RuntimeService:
             decision_engine: DecisionEngine,
             photoelectric_client: PhotoelectricClient,
             cameras: Dict[str, OptCameraClient],
-            repository: SQLiteRepository
+            repository: SQLiteRepository,
+            scheduler_client: SchedulerClient,
+            mes_client: MesClient,
     ):
         """
         初始化运行时服务
@@ -70,6 +74,8 @@ class RuntimeService:
         self.photoelectric_client = photoelectric_client
         self.cameras = cameras
         self.repository = repository
+        self.scheduler_client = scheduler_client
+        self.mes_client = mes_client
 
         # 运行时状态
         self._running = False
@@ -176,8 +182,8 @@ class RuntimeService:
             self._scene_start_abs_ts = ts
             self.logger.info(f"场景开始绝对时间: {ts}")
 
-        # 转换为相对时间
-        relative_ts = ts - self._scene_start_abs_ts
+        ## 转换为相对时间
+        # relative_ts = ts - self._scene_start_abs_ts
         # print(f"p1 上升: {ts}")
         # print(f"场景开始绝对时间: {ts}")
 
@@ -410,8 +416,31 @@ class RuntimeService:
             "finalized_ts": time.time()
         })
 
-        # TODO: 上报到调度系统
-        # await self.scheduler_client.report_result(track)
+        ## 上报到调度系统
+        ## 上报到调度上位机
+        if self.scheduler_client and self.scheduler_client.is_connected:
+            report_payload = {
+                "track_id": track.track_id,
+                "mode": track.mode.value,
+                "final_code": track.final_code,
+                "status": track.final_status.value,
+                "created_at": datetime.fromtimestamp(track.created_ts).isoformat()
+            }
+            asyncio.create_task(self.scheduler_client.report_result(report_payload))
+
+        # 上报到 MES
+        if self.mes_client and self.mes_client.is_connected:
+            mes_payload = {
+                "track_id": track.track_id,
+                "mode": track.mode.value,
+                "final_code": track.final_code,
+                "status": track.final_status.value,
+                "created_at": datetime.fromtimestamp(track.created_ts).isoformat(),
+                "start_time": track.created_ts,
+                "end_time": time.time()
+            }
+            asyncio.create_task(self.mes_client.report_scan_record(mes_payload))
+
 
         # 最终化轨迹（从活动列表移除）
         self.track_manager.finalize_track(track.track_id, track.final_status)

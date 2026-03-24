@@ -11,7 +11,6 @@ from aiohttp import ClientTimeout, ClientSession
 
 from .base import BaseReportClient
 
-
 class MesClient(BaseReportClient):
     """MES 系统 HTTP 客户端"""
 
