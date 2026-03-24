@@ -234,7 +234,6 @@ class RuntimeService:
             # 通知 UI 更新
             await self._notify_ui_window_opened(track)
 
-
     async def _on_pe_fall(self, event: AppEvent) -> None:
         """
         处理 PE 下降沿事件
