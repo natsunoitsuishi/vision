@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 from datetime import datetime
 import logging
 
-from domain.models import BoxTrack
+from domain.models import BoxTrack, CameraResult
 from domain.enums import TrackStatus, DecisionStatus, RunMode
 
 
@@ -29,7 +29,7 @@ class TrackManager:
     - 如果存在重叠歧义，立即报警
     """
 
-    def __init__(self, ttl_ms: int = 1500):
+    def __init__(self, ttl_ms: int = 3000):
         """
         初始化轨迹管理器
 
@@ -316,7 +316,7 @@ class TrackManager:
         self._logger.debug(f"[TrackManager] 关闭扫描窗口: {track_id}, 原因={reason}")
         return True
 
-    def add_camera_result(self, track_id: str, camera_result) -> bool:
+    def add_camera_result(self, track_id: str, camera_result: CameraResult) -> bool:
         """
         添加相机结果到轨迹
 
@@ -334,8 +334,8 @@ class TrackManager:
         track.camera_results.append(camera_result)
 
         # 更新首次成功时间
-        if camera_result.success and track.first_ok_ts is None:
-            track.first_ok_ts = camera_result.result_ts
+        if camera_result.result == "OK" and track.first_ok_ts is None:
+            track.first_ok_ts = camera_result.ts_ms
 
         return True
 

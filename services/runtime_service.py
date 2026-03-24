@@ -227,6 +227,7 @@ class RuntimeService:
             # 通知 UI 更新
             await self._notify_ui_window_opened(track)
 
+
     async def _on_pe_fall(self, event: AppEvent) -> None:
         """
         处理 PE 下降沿事件
@@ -253,12 +254,14 @@ class RuntimeService:
         camera_id = payload.get("camera_id")
         result_data = payload.get("result")
 
+        payload["ts_ms"] = payload.get("ts_ms", 0) / 1000 + self._scene_pe2_on_ts
+
         # 构建 CameraResult 对象
         camera_result = CameraResult(
             camera_id=camera_id,
             code=payload.get("code"),
             raw_payload=payload,
-            ts_ms=payload.get("ts_ms", 0) / 1000 + self._scene_pe2_on_ts,
+            ts_ms=payload.get("ts_ms", 0),
             result="OK" if payload.get("result") == "OK" else "NG",
             symbology=payload.get("symbology")
         )
@@ -297,7 +300,7 @@ class RuntimeService:
 
         # 解析最终结果（如果已满足判定条件）
         final_code, final_status = self.result_binder.resolve_final_code(track)
-
+        print(f"final_status: {final_status}, final_code: {final_code}")
         if final_status is not None:
             # 最终判定
             track.final_code = final_code

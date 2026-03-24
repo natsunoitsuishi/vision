@@ -34,7 +34,6 @@ class SQLiteRepository:
         try:
             with self._get_connection() as conn:
                 conn.execute("SELECT 1")  # 真正测试连接
-                print(get_config("database"))
                 return True, "✅ SQLite 连接成功"
 
         except sqlite3.OperationalError as e:
