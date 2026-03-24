@@ -254,14 +254,14 @@ class RuntimeService:
         camera_id = payload.get("camera_id")
         result_data = payload.get("result")
 
-        payload["ts_ms"] = payload.get("ts_ms", 0) / 1000 + self._scene_pe2_on_ts
+        # payload["ts_ms"] = payload.get("ts_ms", 0) / 1000 + self._scene_pe2_on_ts
 
         # 构建 CameraResult 对象
         camera_result = CameraResult(
             camera_id=camera_id,
             code=payload.get("code"),
             raw_payload=payload,
-            ts_ms=payload.get("ts_ms", 0),
+            ts_ms=payload.get("ts_ms", 0) / 1000 + self._scene_pe2_on_ts,
             result="OK" if payload.get("result") == "OK" else "NG",
             symbology=payload.get("symbology")
         )
@@ -298,16 +298,24 @@ class RuntimeService:
         self.logger.info(f"[相机{camera_id}] 结果绑定到轨迹 {track.track_id}: "
                          f"code={camera_result.code}, success={camera_result.result == 'OK'}")
 
-        # 解析最终结果（如果已满足判定条件）
-        final_code, final_status = self.result_binder.resolve_final_code(track)
-        print(f"final_status: {final_status}, final_code: {final_code}")
-        if final_status is not None:
-            # 最终判定
-            track.final_code = final_code
+        track = self.track_manager.get_track_by_id(track.track_id)
+
+        if len(track.camera_results) >= 2:
+            # 调用决策引擎判定
+
             track.final_status = self.decision_engine.evaluate(track)
+
+            # 设置最终码值
+            successful = [r for r in track.camera_results if r.result == "OK"]
+            track.final_code = successful[0].code if successful else None
+
+            self.logger.info(f"[相机{camera_id}] 轨迹 {track.track_id} 判定完成: {track.final_status.value}")
 
             # 输出结果
             await self._output_result(track)
+        else:
+            self.logger.info(
+                f"[相机{camera_id}] 轨迹 {track.track_id} 已收到 {len(track.camera_results)}/2 个结果，继续等待")
 
     async def _on_camera_heartbeat(self, event: AppEvent) -> None:
         """处理相机心跳事件"""

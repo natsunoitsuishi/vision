@@ -1,7 +1,9 @@
 # domain/decision_engine.py
+import logging
 import time
 from typing import Dict, List
 
+from config.manager import get_config
 from domain.enums import DecisionStatus
 from domain.models import BoxTrack, CameraResult
 
@@ -25,7 +27,7 @@ class DecisionEngine:
     - 超时NG：TIMEOUT
     """
 
-    def __init__(self, config: dict = None):
+    def __init__(self, config: dict = get_config()):
         self.config = config or {}
         self.logger = logging.getLogger("decision_engine")
 
@@ -60,15 +62,16 @@ class DecisionEngine:
         Returns:
             决策状态
         """
+
         if not track:
             self.logger.error("轨迹为空，无法评估")
             self._update_stats(DecisionStatus.FAULT)
             return DecisionStatus.FAULT
 
-        self.logger.debug(f"评估轨迹 {track.track_id}: "
+        self.logger.info(f"评估轨迹 {track.track_id}: "
                           f"相机结果数={len(track.camera_results)}, "
-                          f"开始时间={track.start_ts}, "
-                          f"结束时间={track.end_ts}")
+                          f"创建时间={track.created_ts:.3f}, ")
+                          # f"窗口结束={track.scan_window_end_ts:.3f if track.scan_window_end_ts else 'None'}")
 
         # 步骤1：检查设备异常
         if self._has_device_fault(track):
@@ -254,10 +257,12 @@ class DecisionEngine:
 
         # 时序信息
         timing_info = {
-            "start_ts": track.start_ts,
-            "end_ts": track.end_ts,
-            "scan_window_end_ts": track.scan_window_end_ts,
-            "duration_ms": (track.end_ts - track.start_ts) * 1000 if track.end_ts else None,
+            "created_ts": track.created_ts,  # 创建时间
+            "pe1_on_ts": track.pe1_on_ts,  # PE1触发时间
+            "pe2_on_ts": track.pe2_on_ts,  # PE2触发时间
+            "scan_window_start_ts": track.scan_window_start_ts,  # 窗口开始
+            "scan_window_end_ts": track.scan_window_end_ts,  # 窗口结束
+            "first_ok_ts": track.first_ok_ts,  # 首次成功时间
             "camera_timestamps": {cam_id: res.ts_ms for cam_id, res in success_results.items()}
         }
 
