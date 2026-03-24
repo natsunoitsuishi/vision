@@ -449,7 +449,13 @@ class RuntimeService:
 
 
         # 最终化轨迹（从活动列表移除）
-        self.track_manager.finalize_track(track.track_id, track.final_status)
+        if track.final_status is None:
+            self.logger.error(f"轨迹 {track.track_id} 的 final_status 为 None，使用 FAULT 状态")
+            final_status = DecisionStatus.FAULT
+        else:
+            final_status = track.final_status
+
+        self.track_manager.finalize_track(track.track_id, final_status)
 
         # 检查是否应该停止扫码会话
         await self.scan_session_controller.stop_if_idle()
