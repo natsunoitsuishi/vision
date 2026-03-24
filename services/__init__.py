@@ -5,7 +5,7 @@
 """
 
 from .event_bus import EventBus, create_event_bus, event_listener
-from .runtime_service import RuntimeService
+# from .runtime_service import RuntimeService
 from .health_service import HealthService
 
 # 可选：如果存在其他服务

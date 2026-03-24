@@ -172,7 +172,7 @@ class OptCameraClient(BaseCameraClient):
             raise RuntimeError(f"相机{self.camera_id} 未连接，无法启动会话")
 
         if self._scanning:
-            self.logger.warning(f"[CAM{self.camera_id}] 接收循环已在运行")
+            self.logger.info(f"[CAM{self.camera_id}] 接收循环已在运行")
             return
 
         self._scanning = True
