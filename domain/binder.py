@@ -8,7 +8,6 @@ from typing import List, Optional, Tuple
 from .enums import DecisionStatus
 from .models import BoxTrack, CameraResult
 
-
 class ResultBinder:
     """
     结果绑定器 - 负责将相机结果绑定到正确的轨迹
@@ -59,6 +58,7 @@ class ResultBinder:
 
         # 查找所有可能匹配的轨迹
         candidates = self._find_candidate_tracks(result, active_tracks)
+        print(f"candidates: {candidates}")
 
         if not candidates:
             self._logger.debug(f"相机结果未命中任何时间窗: camera={result.camera_id}, "

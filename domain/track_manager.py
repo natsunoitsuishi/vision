@@ -52,6 +52,8 @@ class TrackManager:
         Returns:
             新创建的轨迹对象
         """
+        #
+        # TODO 设置 PE1 上升沿时间戳为 (相对时间 0, 绝对时间 )
         if ts is None:
             ts = time.time()
 
@@ -286,7 +288,9 @@ class TrackManager:
         track.scan_window_end_ts = window_end_ts
         track.status = TrackStatus.WINDOW_OPEN
 
-        self._logger.debug(f"[TrackManager] 打开扫描窗口: {track_id}, "
+        print(f"[TrackManager] 打开扫描窗口: {track_id}, "
+                           f"窗口={window_start_ts}~{window_end_ts}")
+        self._logger.warning(f"[TrackManager] 打开扫描窗口: {track_id}, "
                            f"窗口={window_start_ts}~{window_end_ts}")
         return True
 

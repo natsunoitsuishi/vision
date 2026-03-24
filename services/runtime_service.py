@@ -58,6 +58,9 @@ class RuntimeService:
             cameras: 相机客户端字典
             repository: 数据仓储
         """
+        self._scene_start_abs_ts = None             # 场景开始的绝对时间
+        self._scene_pe2_on_ts = None                # PE2 触发的绝对时间
+
         self.event_bus = event_bus
         self.track_manager = track_manager
         self.trigger_scheduler = trigger_scheduler
@@ -167,7 +170,16 @@ class RuntimeService:
         PE2 上升沿：匹配轨迹并打开扫描窗口
         """
         sensor = event.payload.get("sensor")
-        ts = event.payload.get("ts", time.time())
+        ts = event.payload.get("ts", time.time())  # 绝对时间
+
+        if self._scene_start_abs_ts is None:
+            self._scene_start_abs_ts = ts
+            self.logger.info(f"场景开始绝对时间: {ts}")
+
+        # 转换为相对时间
+        relative_ts = ts - self._scene_start_abs_ts
+        print(f"p1 上升: {ts}")
+        print(f"场景开始绝对时间: {ts}")
 
         if sensor == "PE1":
             # 创建新轨迹
@@ -183,6 +195,7 @@ class RuntimeService:
         elif sensor == "PE2":
             # 匹配轨迹
             track = self.track_manager.match_track_for_pe2(ts)
+            self._scene_pe2_on_ts = track.pe2_on_ts
 
             if track is None:
                 self.logger.warning("[PE2] 没有匹配的轨迹")
@@ -245,7 +258,7 @@ class RuntimeService:
             camera_id=camera_id,
             code=payload.get("code"),
             raw_payload=payload,
-            ts_ms=payload.get("ts_ms", time.time() * 1000),
+            ts_ms=payload.get("ts_ms", 0) / 1000 + self._scene_pe2_on_ts,
             result="OK" if payload.get("result") == "OK" else "NG",
             symbology=payload.get("symbology")
         )

@@ -30,7 +30,7 @@ class SchedulerConfig:
 class TriggerScheduler:
     """
     触发器调度器 - 负责计算和管理每个鞋盒的读码时间窗
-    根据BoxTrack的PE信号、速度和配置计算精确的扫描窗口
+    根据BoxTrack的PE信号、速度和配置计算精确扫描窗口
     """
 
     def __init__(self, config: SchedulerConfig = None):

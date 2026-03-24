@@ -1,13 +1,13 @@
 # devices/camera/base.py
-from abc import ABC, abstractmethod
-from typing import Optional, Callable, Awaitable
 import asyncio
-import logging
 import json
+import logging
+from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Optional
 
-from config.manager import ConfigManager, get_config
-from domain.enums import DecisionStatus, DeviceStatus, EventType
+from config.manager import get_config
+from domain.enums import DeviceStatus, EventType
 from domain.models import DeviceHealth, CameraResult
 from services.event_bus import EventBus
 

@@ -348,7 +348,7 @@ class PhotoelectricClient:
 
         except Exception as e:
             self.logger.error(f"读取DI失败: {e}")
-            self._update_health(DeviceStatus.ERROR, f"读取失败: {e}")
+            self._update_health(DeviceStatus.OFFLINE, f"读取失败: {e}")
             raise
 
     # =============================

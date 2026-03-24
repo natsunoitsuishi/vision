@@ -62,8 +62,8 @@ class CameraResult:
     def status(self) -> DecisionStatus:
         """转换为决策状态"""
         if self.is_success:
-            return DecisionStatus.SUCCESS
-        return DecisionStatus.FAILURE
+            return DecisionStatus.OK
+        return DecisionStatus.FAULT
 
     @classmethod
     def from_dict(cls, data: dict) -> "CameraResult":
@@ -152,8 +152,8 @@ class BoxTrack:
     def add_camera_result(self, result: CameraResult):
         """添加相机结果"""
         self.camera_results.append(result)
-        if result.success and not self.first_ok_ts:
-            self.first_ok_ts = result.result_ts
+        if result.result == "OK" and not self.first_ok_ts:
+            self.first_ok_ts = result.ts_ms
 
     def finalize(self, code: Optional[str], status: DecisionStatus):
         """完成跟踪"""

@@ -4,11 +4,9 @@
 """
 import asyncio
 import logging
-from typing import Dict, Optional, List
 from datetime import datetime
+from typing import Dict, Optional
 
-from .enums import TrackStatus
-from domain.models import BoxTrack
 from devices.camera import OptCameraClient
 
 
