@@ -201,7 +201,8 @@ class RuntimeService:
         elif sensor == "PE2":
             # 匹配轨迹
             track = self.track_manager.match_track_for_pe2(ts)
-            self._scene_pe2_on_ts = track.pe2_on_ts
+            if self._scene_pe2_on_ts is None:
+                self._scene_pe2_on_ts = track.pe2_on_ts
 
             if track is None:
                 self.logger.warning("[PE2] 没有匹配的轨迹")
@@ -260,25 +261,26 @@ class RuntimeService:
         camera_id = payload.get("camera_id")
         result_data = payload.get("result")
 
-        # payload["ts_ms"] = payload.get("ts_ms", 0) / 1000 + self._scene_pe2_on_ts
+        # 获取活动轨迹
+        active_tracks = self.track_manager.get_active_tracks()
+        if not active_tracks:
+            self.logger.warning(f"[相机{camera_id}] 收到结果但没有活动轨迹")
+            await self._raise_alarm("NO_ACTIVE_TRACK", "收到扫码结果但没有活动轨迹")
+            return
+
+        print(f"len of active_tracks: {len(active_tracks)}")
+        # TODO bb
+        active_track_time = active_tracks[0].pe2_on_ts
 
         # 构建 CameraResult 对象
         camera_result = CameraResult(
             camera_id=camera_id,
             code=payload.get("code"),
             raw_payload=payload,
-            ts_ms=payload.get("ts_ms", 0) / 1000 + self._scene_pe2_on_ts,
+            ts_ms=payload.get("ts_ms", 0) / 1000 + active_track_time,
             result="OK" if payload.get("result") == "OK" else "NG",
             symbology=payload.get("symbology")
         )
-
-        # 获取活动轨迹
-        active_tracks = self.track_manager.get_active_tracks()
-
-        if not active_tracks:
-            self.logger.warning(f"[相机{camera_id}] 收到结果但没有活动轨迹: {camera_result.code}")
-            await self._raise_alarm("NO_ACTIVE_TRACK", "收到扫码结果但没有活动轨迹")
-            return
 
         # 绑定结果到轨迹
         track = self.result_binder.bind(camera_result, active_tracks)
@@ -319,9 +321,13 @@ class RuntimeService:
 
             # 输出结果
             await self._output_result(track)
+
+            await self.photoelectric_client.write_coil("cam1_enable", False)
+            await self.photoelectric_client.write_coil("cam2_enable", False)
         else:
             self.logger.info(
                 f"[相机{camera_id}] 轨迹 {track.track_id} 已收到 {len(track.camera_results)}/2 个结果，继续等待")
+
 
     async def _on_camera_heartbeat(self, event: AppEvent) -> None:
         """处理相机心跳事件"""

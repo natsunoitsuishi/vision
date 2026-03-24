@@ -29,7 +29,7 @@ class TrackManager:
     - 如果存在重叠歧义，立即报警
     """
 
-    def __init__(self, ttl_ms: int = 3000):
+    def __init__(self, ttl_ms: int = 1500):
         """
         初始化轨迹管理器
 
