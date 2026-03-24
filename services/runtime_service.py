@@ -178,8 +178,8 @@ class RuntimeService:
 
         # 转换为相对时间
         relative_ts = ts - self._scene_start_abs_ts
-        print(f"p1 上升: {ts}")
-        print(f"场景开始绝对时间: {ts}")
+        # print(f"p1 上升: {ts}")
+        # print(f"场景开始绝对时间: {ts}")
 
         if sensor == "PE1":
             # 创建新轨迹
