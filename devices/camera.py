@@ -44,9 +44,9 @@ class BaseCameraClient(ABC):
         self._heartbeat_task: Optional[asyncio.Task] = None
 
         # 连接参数（适配设备模拟程序）
-        self.host = get_config("host", "127.0.0.1")
-        self.port = get_config("port", 16001 if camera_id == 1 else 16002)
-        self.timeout = get_config("timeout", 3.0)
+        self.host = get_config("camera.host", "192.168.10.79")
+        self.port = get_config("camera.port", "1024")
+        self.timeout = get_config("camera.timeout", 3.0)
 
         # TCP Socket（用于asyncio）
         self._reader: Optional[asyncio.StreamReader] = None
@@ -313,5 +313,97 @@ class OptCameraClient(BaseCameraClient):
     def is_connected(self) -> bool:
         return self._connected
 
+
 if __name__ == "__main__":
-    pass
+
+    import socket
+    import time
+
+    # 相机配置（与截图一致）
+    CAMERA_IP = "192.168.10.79"
+    CAMERA_PORT = 1025
+    TRIGGER_CMD = b"start"  # 触发拍照指令
+    STOP_CMD = b"stop"  # 停止触发指令
+
+    def tcp_trigger_capture_on():
+        try:
+            # 创建TCP客户端套接字
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((CAMERA_IP, CAMERA_PORT))
+                print(f"已连接到相机: {CAMERA_IP}:{CAMERA_PORT}")
+
+                # 发送触发指令拍照
+                s.sendall(TRIGGER_CMD)
+                print("已发送触发指令: start")
+
+                # 可选：等待拍照完成，再发送停止指令
+                # time.sleep(1)
+                # s.sendall(STOP_CMD)
+                # print("已发送停止指令: stop")
+
+        except Exception as e:
+            print(f"触发失败: {e}")
+
+    def tcp_trigger_capture_off():
+        try:
+            # 创建TCP客户端套接字
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((CAMERA_IP, CAMERA_PORT))
+                print(f"已连接到相机: {CAMERA_IP}:{CAMERA_PORT}")
+
+                # 发送触发指令拍照
+                s.sendall(STOP_CMD)
+                print("已发送触发指令: stop")
+
+                # 可选：等待拍照完成，再发送停止指令
+                # time.sleep(1)
+                # s.sendall(STOP_CMD)
+                # print("已发送停止指令: stop")
+
+        except Exception as e:
+            print(f"触发失败: {e}")
+
+    tcp_trigger_capture_on()
+
+    import socket
+
+    # 目标 IP 和端口
+    ip = "192.168.10.79"
+    port = 1024
+    my_str = ''
+    pre_code = '-1'
+    while True:
+        # 创建 TCP 连接
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(5)
+
+        try:
+            # 连接
+            s.connect((ip, port))
+
+            # 发送数据（HTTP 协议最小请求）
+            s.send(b"GET / HTTP/1.1\r\nHost: test\r\n\r\n")
+
+            # 接收回复
+            reply = s.recv(4096)
+            import json
+
+            data = json.loads(reply.decode())
+            code = data.get("code")
+            print(code)
+
+            if not code == 'NG':
+                my_str += code
+
+                print(f"code: {code}, pre_code: {pre_code}")
+                if int(code) < int(pre_code):
+                    with open("log.txt", "a") as f:
+                        f.write(my_str + "\n")
+                        my_str = ''
+
+                pre_code = code
+
+        except Exception as e:
+            print("失败:", e)
+        finally:
+            s.close()

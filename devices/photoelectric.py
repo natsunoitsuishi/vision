@@ -385,4 +385,149 @@ class PhotoelectricClient:
 # =============================
 
 if __name__ == '__main__':
-    pass
+    # from openpyxl import load_workbook
+    #
+    # wb = load_workbook("test.xlsx")
+    # ws = wb["Sheet1"]
+    #
+    # print(ws)
+
+    def calculate_missing_rate(s: str) -> dict:
+        """
+        计算字符串中"123456"序列的缺失率
+
+        规则：
+        - 正常序列应该是 1,2,3,4,5,6 循环
+        - 遇到下降(即当前字符 <= 前一个字符)表示新序列开始
+        - 统计每个完整周期应该有的字符数和实际出现的字符数
+        - 缺失率 = 缺失字符数 / 应该有的字符总数
+
+        Args:
+            s: 只包含1-6字符的字符串
+
+        Returns:
+            包含缺失率、统计信息等数据的字典
+        """
+        if not s:
+            return {"missing_rate": 0, "total_expected": 0, "total_actual": 0, "missing_count": 0}
+
+        # 期望的完整序列
+        full_sequence = ['1', '2', '3', '4', '5', '6']
+
+        # 分割成多个序列
+        sequences = []
+        current_seq = [s[0]]
+
+        for i in range(1, len(s)):
+            # 如果当前字符 <= 前一个字符，说明开始了新序列
+            if s[i] <= s[i - 1]:
+                sequences.append(current_seq)
+                current_seq = [s[i]]
+            else:
+                current_seq.append(s[i])
+        sequences.append(current_seq)
+
+        # 统计每个序列的缺失
+        total_expected = 0  # 应该有的字符总数
+        total_actual = 0  # 实际出现的字符总数
+
+        for seq in sequences:
+            # 这个序列应该有哪些字符？
+            expected_chars = set()
+            for ch in seq:
+                # 从当前字符开始，期望一直到6
+                start_idx = full_sequence.index(ch)
+                for j in range(start_idx, 6):
+                    expected_chars.add(full_sequence[j])
+
+            # 实际出现的字符（去重）
+            actual_chars = set(seq)
+
+            total_expected += len(expected_chars)
+            total_actual += len(actual_chars)
+
+        missing_count = total_expected - total_actual
+        missing_rate = missing_count / total_expected if total_expected > 0 else 0
+
+        return {
+            "missing_rate": missing_rate,
+            "missing_rate_percent": f"{missing_rate * 100:.2f}%",
+            "total_expected": total_expected,
+            "total_actual": total_actual,
+            "missing_count": missing_count,
+            "sequences": sequences
+        }
+
+
+    def calculate_missing_rate_v2(s: str) -> dict:
+        """
+        简化版：按你的例子逻辑计算
+
+        你的例子: "11234512346"
+        1算1次, 2算1次, 3算1次, 4算1次, 5算1次, 6缺失 -> 5/6
+        再1算1次, 2算1次, 3算1次, 4算1次, 5算1次, 6缺失 -> 5/6
+        总应该: 12, 实际: 10, 缺失率: 2/12 = 16.67%
+        """
+        if not s:
+            return {"missing_rate": 0}
+
+        full = ['1', '2', '3', '4', '5', '6']
+        sequences = []
+        current_seq = [s[0]]
+
+        # 按下降分割序列
+        for i in range(1, len(s)):
+            if s[i] <= s[i - 1]:
+                sequences.append(current_seq)
+                current_seq = [s[i]]
+            else:
+                current_seq.append(s[i])
+        sequences.append(current_seq)
+
+        total_expected = 0
+        total_actual = 0
+
+        for seq in sequences:
+            # 这个序列的起始数字
+            start_char = seq[0]
+            start_idx = full.index(start_char)
+
+            # 期望的字符数：从起始到6
+            expected_count = 6 - start_idx
+            total_expected += expected_count
+
+            # 实际不重复的字符数
+            actual_count = len(set(seq))
+            total_actual += actual_count
+
+        missing_count = total_expected - total_actual
+        missing_rate = missing_count / total_expected if total_expected > 0 else 0
+
+        return {
+            "missing_rate": missing_rate,
+            "missing_rate_percent": f"{missing_rate * 100:.2f}%",
+            "missing_count": missing_count,
+            "total_expected": total_expected,
+            "total_actual": total_actual
+        }
+
+
+    # ========== 测试 ==========
+    if __name__ == "__main__":
+        # 测试用例
+        test_cases = [
+            ("11234512346", "你的例子"),
+            ("123456123456", "完整序列"),
+            ("112345612345122345", "有下降的序列"),
+            ("112345123456", "第一个缺6"),
+            ("111222333444555666", "重复数字"),
+            ("1234512345", "一直缺6"),
+        ]
+
+        for s, desc in test_cases:
+            print(f"\n{desc}: '{s}'")
+            result = calculate_missing_rate_v2(s)
+            print(f"  应该有的字符总数: {result['total_expected']}")
+            print(f"  实际有的字符总数: {result['total_actual']}")
+            print(f"  缺失数量: {result['missing_count']}")
+            print(f"  缺失率: {result['missing_rate_percent']}")
