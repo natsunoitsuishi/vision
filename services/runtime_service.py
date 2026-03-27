@@ -260,7 +260,6 @@ class RuntimeService:
             return
 
         print(f"len of active_tracks: {len(active_tracks)}")
-        # TODO bb
         active_track_time = active_tracks[0].pe2_on_ts
 
         # 构建 CameraResult 对象
@@ -382,26 +381,26 @@ class RuntimeService:
         self.logger.info(f"[输出] 轨迹 {track.track_id}: "
                          f"状态={track.final_status.value}, 码值={track.final_code}")
 
-        # 更新统计
-        if track.final_status == DecisionStatus.OK:
-            self.stats["ok_count"] += 1
-            # 输出 OK 脉冲
-            await self.photoelectric_client.write_pulse("ok")
-        elif track.final_status == DecisionStatus.NO_READ:
-            self.stats["ng_count"] += 1
-            await self.photoelectric_client.write_pulse("ng")
-            await self.photoelectric_client.write_pulse("reject")
-        elif track.final_status == DecisionStatus.AMBIGUOUS:
-            self.stats["ambiguous_count"] += 1
-            await self.photoelectric_client.write_pulse("ng")
-            await self.photoelectric_client.write_pulse("reject")
-        elif track.final_status == DecisionStatus.TIMEOUT:
-            self.stats["timeout_count"] += 1
-            await self.photoelectric_client.write_pulse("ng")
-            await self.photoelectric_client.write_pulse("reject")
-        elif track.final_status == DecisionStatus.FAULT:
-            self.stats["fault_count"] += 1
-            await self.photoelectric_client.write_pulse("ng")
+        # # 更新统计
+        # if track.final_status == DecisionStatus.OK:
+        #     self.stats["ok_count"] += 1
+        #     # 输出 OK 脉冲
+        #     await self.photoelectric_client.write_pulse("ok")
+        # elif track.final_status == DecisionStatus.NO_READ:
+        #     self.stats["ng_count"] += 1
+        #     await self.photoelectric_client.write_pulse("ng")
+        #     await self.photoelectric_client.write_pulse("reject")
+        # elif track.final_status == DecisionStatus.AMBIGUOUS:
+        #     self.stats["ambiguous_count"] += 1
+        #     await self.photoelectric_client.write_pulse("ng")
+        #     await self.photoelectric_client.write_pulse("reject")
+        # elif track.final_status == DecisionStatus.TIMEOUT:
+        #     self.stats["timeout_count"] += 1
+        #     await self.photoelectric_client.write_pulse("ng")
+        #     await self.photoelectric_client.write_pulse("reject")
+        # elif track.final_status == DecisionStatus.FAULT:
+        #     self.stats["fault_count"] += 1
+        #     await self.photoelectric_client.write_pulse("ng")
 
         # 保存扫描记录到数据库
         await self.repository.save_scan_record({

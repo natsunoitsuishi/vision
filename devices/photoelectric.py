@@ -19,8 +19,6 @@ from services.event_bus import EventBus
     - DI (离散输入): 地址0=光电1, 地址1=光电2
     - DO (线圈): 地址0=OK输出, 地址1=NG输出, 地址2=REJECT输出
 """
-# TODO 记录时间戳
-
 class PhotoelectricClient:
     def __init__(self, event_bus: EventBus):
         self.logger = logging.getLogger("photoelectric.client")

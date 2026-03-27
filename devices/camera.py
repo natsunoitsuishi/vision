@@ -1,6 +1,7 @@
 # devices/camera/base.py
 import asyncio
 import logging
+import socket
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Optional
@@ -40,7 +41,7 @@ class BaseCameraClient(ABC):
         # 连接参数（适配设备模拟程序）
         self.host = get_config("camera.host", "192.168.1.79")
         self.port = get_config("camera.port", "1024")
-        self.trigger_port = get_config("camera.trigger_port", "1025")
+        self.trigger_port = get_config("camera.trigger_port", 1025)
         self.timeout = get_config("camera.timeout", 3.0)
 
         # TCP Socket（用于asyncio）
