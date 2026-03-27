@@ -182,11 +182,6 @@ class RuntimeService:
             self._scene_start_abs_ts = ts
             self.logger.info(f"场景开始绝对时间: {ts}")
 
-        ## 转换为相对时间
-        # relative_ts = ts - self._scene_start_abs_ts
-        # print(f"p1 上升: {ts}")
-        # print(f"场景开始绝对时间: {ts}")
-
         if sensor == "PE1":
             # 创建新轨迹
             track = self.track_manager.create_track(ts, self._current_mode)
@@ -217,9 +212,6 @@ class RuntimeService:
                     track.speed_mm_s = sensor_distance / time_diff
                 else:
                     track.speed_mm_s = get_config("runtime", {}).get("line_speed_mm_s", 800)
-
-            await self.photoelectric_client.write_coil("cam1_enable", True)
-            await self.photoelectric_client.write_coil("cam2_enable", True)
 
             # 打开扫描窗口
             self.trigger_scheduler.open_scan_window(track, self._current_mode)
@@ -277,7 +269,7 @@ class RuntimeService:
             code=payload.get("code"),
             raw_payload=payload,
             ts_ms=payload.get("ts_ms", 0) / 1000 + active_track_time,
-            result="OK" if payload.get("result") == "OK" else "NG",
+            result="TRUE" if payload.get("result") == "TRUE" else "FALSE",
             symbology=payload.get("symbology")
         )
 
@@ -313,7 +305,7 @@ class RuntimeService:
             track.final_status = self.decision_engine.evaluate(track)
 
             # 设置最终码值
-            successful = [r for r in track.camera_results if r.result == "OK"]
+            successful = [r for r in track.camera_results if r.result == "TRUE"]
             track.final_code = successful[0].code if successful else None
 
             self.logger.info(f"[相机{camera_id}] 轨迹 {track.track_id} 判定完成: {track.final_status.value}")

@@ -19,6 +19,7 @@ from services.event_bus import EventBus
     - DI (离散输入): 地址0=光电1, 地址1=光电2
     - DO (线圈): 地址0=OK输出, 地址1=NG输出, 地址2=REJECT输出
 """
+# TODO 记录时间戳
 
 class PhotoelectricClient:
     def __init__(self, event_bus: EventBus):
@@ -116,7 +117,6 @@ class PhotoelectricClient:
         self._update_health(DeviceStatus.OFFLINE, "disconnected")
         self.logger.info("ModbusTCP 已断开")
 
-
     # =============================
     # 监控循环
     # =============================
@@ -130,12 +130,6 @@ class PhotoelectricClient:
         await self.stop_monitoring()
 
     async def start_monitoring(self, interval_ms: int = 20) -> None:
-        """
-        启动DI状态监控循环
-
-        Args:
-            interval_ms: 轮询间隔（毫秒）
-        """
         if not self._connected:
             raise RuntimeError("Modbus 未连接，无法启动监控")
 
@@ -149,7 +143,6 @@ class PhotoelectricClient:
         self.logger.info(f"启动DI监控，间隔={interval_ms}ms")
 
     async def stop_monitoring(self) -> None:
-        """停止监控循环"""
         self._running = False
 
         if self._monitor_task and not self._monitor_task.done():
@@ -162,7 +155,6 @@ class PhotoelectricClient:
         self.logger.info("停止DI监控")
 
     async def _monitor_loop(self, interval: float) -> None:
-        """DI状态监控循环"""
         while self._running and self._connected:
             try:
                 # 读取DI状态

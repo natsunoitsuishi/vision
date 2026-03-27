@@ -35,20 +35,17 @@ class CameraResult:
     # 相机ID (1 或 2)
     camera_id: int
 
-    # 扫码结果状态 (OK/NG)
+    # 扫码结果状态 (TRUE/FALSE)
     result: str
 
-    # 码值 (result=OK时有值，NG时为None)
-    code: Optional[str]
+    # 码值 (result=OK时有值，NG时为NG)
+    code: str
 
-    # 码制 (QR/BARCODE等)
-    symbology: Optional[str]
+    # 码制 (UNKNOWN/QRCODE/BARCODE等)
+    symbology: str
 
     # 仿真时间戳，单位毫秒
     ts_ms: int
-
-    # 可选：消息类型 (固定为 "scan_result")
-    type: str = "scan_result"
 
     # 可选：payload 负载, 原始报文，用于调试
     raw_payload: Optional[dict] = None
