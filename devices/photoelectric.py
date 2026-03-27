@@ -1,8 +1,8 @@
 # devices/modbus_client.py
 import asyncio
 import logging
-from typing import Optional, Tuple, Dict
 from datetime import datetime
+from typing import Optional, Tuple
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
@@ -12,16 +12,15 @@ from domain.enums import DeviceStatus, EventType
 from domain.models import DeviceHealth
 from services.event_bus import EventBus
 
-
-class PhotoelectricClient:
-    """
+"""
     ModbusTCP 客户端，用于对接设备模拟程序
-
+    
     地址映射：
     - DI (离散输入): 地址0=光电1, 地址1=光电2
     - DO (线圈): 地址0=OK输出, 地址1=NG输出, 地址2=REJECT输出
-    """
+"""
 
+class PhotoelectricClient:
     def __init__(self, event_bus: EventBus):
         self.logger = logging.getLogger("photoelectric.client")
 
@@ -29,13 +28,6 @@ class PhotoelectricClient:
         self.host = get_config("photoelectric.host", "192.168.1.117")
         self.port = get_config("photoelectric.port", 500)
         self.timeout = get_config("photoelectric.timeout", 3.0)
-
-        # 脉冲时长配置（毫秒）
-        self._pulse_ms = get_config("photoelectric.pulse_ms", {
-            "ok": 80,
-            "ng": 120,
-            "reject": 200
-        })
 
         # DO 通道映射
         self._do_map = get_config("photoelectric.do_map", {
@@ -62,7 +54,6 @@ class PhotoelectricClient:
 
         # 监控任务
         self._monitor_task: Optional[asyncio.Task] = None
-        self._pulse_tasks: Dict[str, asyncio.Task] = {}  # 脉冲输出任务
 
         # 上次DI状态
         self._last_di1 = False
@@ -110,11 +101,6 @@ class PhotoelectricClient:
         """断开ModbusTCP连接"""
         self._running = False
 
-        # 取消所有脉冲任务
-        for task in self._pulse_tasks.values():
-            if not task.done():
-                task.cancel()
-        self._pulse_tasks.clear()
 
         if self._monitor_task and not self._monitor_task.done():
             self._monitor_task.cancel()
@@ -130,88 +116,6 @@ class PhotoelectricClient:
         self._update_health(DeviceStatus.OFFLINE, "disconnected")
         self.logger.info("ModbusTCP 已断开")
 
-    # =============================
-    # 脉冲输出
-    # =============================
-
-    async def write_pulse(self, output_name: str) -> None:
-        """
-        输出脉冲（异步非阻塞）
-
-        Args:
-            output_name: 输出名称 ("ok", "ng", "reject")
-        """
-        if not self._connected or not self._client:
-            self.logger.warning(f"Modbus 未连接，无法输出脉冲: {output_name}")
-            return
-
-        # 获取通道和脉冲时长
-        channel = self._do_map.get(output_name)
-        if channel is None:
-            self.logger.warning(f"未知的输出名称: {output_name}")
-            return
-
-        duration_ms = self._pulse_ms.get(output_name, 100)
-
-        self.logger.debug(f"输出脉冲: {output_name}, channel={channel}, duration={duration_ms}ms")
-
-        # 创建脉冲任务（如果已有相同任务，先取消）
-        if output_name in self._pulse_tasks and not self._pulse_tasks[output_name].done():
-            self._pulse_tasks[output_name].cancel()
-
-        # 启动新的脉冲任务
-        self._pulse_tasks[output_name] = asyncio.create_task(
-            self._pulse_task(channel, duration_ms / 1000.0)
-        )
-
-    async def _pulse_task(self, channel: int, duration_sec: float) -> None:
-        """
-        脉冲输出任务
-
-        Args:
-            channel: DO 通道号
-            duration_sec: 脉冲持续时间（秒）
-        """
-        try:
-            # 设置 DO 为 True
-            await self._write_coil(channel, True)
-            self.logger.debug(f"DO{channel} 已置高")
-
-            # 等待脉冲持续时间
-            await asyncio.sleep(duration_sec)
-
-            # 设置 DO 为 False
-            await self._write_coil(channel, False)
-            self.logger.debug(f"DO{channel} 已置低")
-
-        except asyncio.CancelledError:
-            # 任务被取消，确保复位 DO
-            try:
-                await self._write_coil(channel, False)
-                self.logger.debug(f"DO{channel} 脉冲被取消，已复位")
-            except Exception as e:
-                self.logger.error(f"脉冲取消后复位失败: {e}")
-            raise
-        except Exception as e:
-            self.logger.error(f"脉冲输出失败: channel={channel}, error={e}")
-
-        """
-        写入线圈（同步写入，带重试）
-        """
-    async def _write_coil(self, address: int, value: bool) -> None:
-
-        if not self._connected or not self._client:
-            raise RuntimeError("Modbus 未连接")
-
-        try:
-            result = await self._client.write_coil(address, value)
-
-            if result.isError():
-                raise ModbusException(f"写入线圈失败: {result}")
-
-        except Exception as e:
-            self.logger.error(f"写入线圈失败: address={address}, value={value}, error={e}")
-            raise
 
     # =============================
     # 监控循环
@@ -319,27 +223,21 @@ class PhotoelectricClient:
         self._last_di2 = di2
 
     # =============================
-    # 数据读写
+    # 数据读取
     # =============================
 
     async def read_discrete_inputs(self) -> Tuple[bool, bool]:
-        """
-        读取离散输入（DI1和DI2）
-
-        Returns:
-            (di1, di2): 光电1和光电2的状态
-        """
         if not self._connected or not self._client:
             raise RuntimeError("Modbus 未连接")
 
         try:
-            result = await self._client.read_discrete_inputs(0, count=2)
+            photoelectric_result = await self._client.read_discrete_inputs(0, count=2)
 
-            if result.isError():
-                raise ModbusException(f"读取DI失败: {result}")
+            if photoelectric_result.isError():
+                raise ModbusException(f"读取DI失败: {photoelectric_result}")
 
-            di1 = result.bits[0]
-            di2 = result.bits[1]
+            di1 = photoelectric_result.bits[0]
+            di2 = photoelectric_result.bits[1]
 
             return di1, di2
 
@@ -374,8 +272,22 @@ class PhotoelectricClient:
         """是否已连接"""
         return self._connected
 
-    async def write_coil(self, can_name, is_enable):
-        await self._client.write_coil(0 if can_name == "cam1_enable" else 1, is_enable)
+    # async def write_coil(self, can_name, is_enable):
+    #     await self._client.write_coil(0 if can_name == "cam1_enable" else 1, is_enable)
+    #
+    # async def _write_coil(self, address: int, value: bool) -> None:
+    #     if not self._connected or not self._client:
+    #         raise RuntimeError("Modbus 未连接")
+    #
+    #     try:
+    #         result = await self._client.write_coil(address, value)
+    #
+    #         if result.isError():
+    #             raise ModbusException(f"写入线圈失败: {result}")
+    #
+    #     except Exception as e:
+    #         self.logger.error(f"写入线圈失败: address={address}, value={value}, error={e}")
+    #         raise
 
 # =============================
 # 使用示例
@@ -396,7 +308,7 @@ if __name__ == '__main__':
     while True:
 
     # 一次读取 DI1 + DI2 两个光电（地址0、地址1，共2个点）
-        result = client.read_discrete_inputs(address=0, count=2, device_id=1)
+        result = client.read_discrete_inputs(address=0, count=2)
 
         if not result.isError():
             # 光电1 = DI1 = 地址0
