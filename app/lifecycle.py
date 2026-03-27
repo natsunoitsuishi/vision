@@ -159,10 +159,10 @@ class AppController:
             await cam1.connect()
             await cam1.start_scan_session()
             self.cameras["CAM1"] = cam1
-            cam2 = OptCameraClient(2, self.event_bus)
-            await cam2.connect()
-            await cam2.start_scan_session()
-            self.cameras["CAM2"] = cam2
+            # cam2 = OptCameraClient(2, self.event_bus)
+            # await cam2.connect()
+            # await cam2.start_scan_session()
+            # self.cameras["CAM2"] = cam2
 
             self.photoelectric_client = PhotoelectricClient(self.event_bus)
             await self.photoelectric_client.connect()
@@ -180,7 +180,7 @@ class AppController:
             self.scheduler_client = SchedulerClient(
                 host=get_config("scheduler_client_host", "127.0.0.1"),
                 port=get_config("scheduler_client_port", 8080),
-                device_id=get_config("app.scheduler_client_id", "VG-01")
+                device_id=get_config("scheduler_client_id", "VG-01")
             )
             await self.scheduler_client.connect()
             self.logger.info("调度上位机客户端已启动")
