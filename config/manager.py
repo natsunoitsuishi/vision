@@ -44,10 +44,6 @@ class ConfigManager:
                    watch: bool = False) -> None:
         """
         异步加载配置文件
-
-        Args:
-            config_path: 配置文件路径
-            watch: 是否监听文件变化
         """
         async with self._load_lock:
             self._config_path = Path(config_path)
@@ -89,10 +85,6 @@ class ConfigManager:
     def get(self, key: str, default: Any = None) -> Any:
         """
         获取配置项，支持点号访问嵌套
-
-        Examples:
-            config.get("database.path")
-            config.get("cameras.0.host")
         """
         try:
             value = self._config
@@ -292,12 +284,6 @@ class ConfigManager:
         self._logger.info("配置文件监控已停止")
 
     def validate(self, schema: Dict[str, Any] = None) -> bool:
-        """
-        验证配置（简单验证，可根据需要扩展）
-
-        Args:
-            schema: 验证规则，格式如 {"required": ["database.path"]}
-        """
         if not schema:
             return True
 
@@ -320,25 +306,11 @@ _default_manager = ConfigManager()
 
 async def load_config(config_path: str = get_project_config_path(),
                       watch: bool = False) -> Dict[str, Any]:
-    """
-    异步加载配置（简单函数接口）
-
-    Example:
-        config = await load_config("config/default.yaml")
-        mode = config.get("runtime", {}).get("mode")
-    """
     await _default_manager.load(config_path, watch=watch)
     return _default_manager.get_config()
 
 
 def get_config(key: str = None, default: Any = None) -> Any:
-    """
-    获取配置（同步函数接口）
-
-    Example:
-        mode = get_config("runtime.mode", "LR")
-        all_config = get_config()
-    """
     if key is None:
         return _default_manager.get_config()
     return _default_manager.get(key, default)

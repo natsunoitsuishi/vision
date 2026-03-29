@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
-from config.manager import get_config
+from config.manager import get_config, load_config
 from domain.enums import DeviceStatus, EventType
 from domain.models import DeviceHealth
 from services.event_bus import EventBus
@@ -25,7 +25,7 @@ class PhotoelectricClient:
 
         # 连接参数
         self.host = get_config("photoelectric.host", "192.168.1.117")
-        self.port = get_config("photoelectric.port", 500)
+        self.port = get_config("photoelectric.port", 501)
         self.timeout = get_config("photoelectric.timeout", 3.0)
 
         # DO 通道映射
@@ -286,28 +286,34 @@ class PhotoelectricClient:
 if __name__ == '__main__':
     from pymodbus.client import ModbusTcpClient
     import time
-
     # 模块默认IP和端口
-    IP = "192.168.1.117"
-    PORT = 500
+    async def main():
+        await load_config()
+    # 模块默认IP和端口
 
-    # 建立连接
-    client = ModbusTcpClient(IP, port=PORT)
-    client.connect()
+        IP = get_config("photoelectric.host", "192.168.1.117")
 
-    while True:
+        PORT = get_config("photoelectric.port")
 
-    # 一次读取 DI1 + DI2 两个光电（地址0、地址1，共2个点）
-        result = client.read_discrete_inputs(address=0, count=2)
+        # 建立连接
+        client = ModbusTcpClient(IP, port=PORT)
+        client.connect()
 
-        if not result.isError():
-            # 光电1 = DI1 = 地址0
-            pe1 = result.bits[0]
-            # 光电2 = DI2 = 地址1
-            pe2 = result.bits[1]
-            print(f"光电1状态: {pe1}  |  光电2状态: {pe2}")
-        else:
-            print("读取失败")
+        while True:
 
-        time.sleep(0.01)
-    client.close()
+        # 一次读取 DI1 + DI2 两个光电（地址0、地址1，共2个点）
+            result = client.read_discrete_inputs(address=0, count=2)
+
+            if not result.isError():
+                # 光电1 = DI1 = 地址0
+                pe1 = result.bits[0]
+                # 光电2 = DI2 = 地址1
+                pe2 = result.bits[1]
+                print(f"光电1状态: {pe1}  |  光电2状态: {pe2}")
+            else:
+                print("读取失败")
+
+            time.sleep(0.01)
+        client.close()
+
+    asyncio.run(main())

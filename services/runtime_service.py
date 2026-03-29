@@ -62,8 +62,6 @@ class RuntimeService:
             cameras: 相机客户端字典
             repository: 数据仓储
         """
-        self._scene_start_abs_ts = None             # 场景开始的绝对时间
-        self._scene_pe2_on_ts = None                # PE2 触发的绝对时间
 
         self.event_bus = event_bus
         self.track_manager = track_manager
@@ -178,9 +176,6 @@ class RuntimeService:
         sensor = event.payload.get("sensor")
         ts = event.payload.get("ts", time.time())  # 绝对时间
 
-        if self._scene_start_abs_ts is None:
-            self._scene_start_abs_ts = ts
-            self.logger.info(f"场景开始绝对时间: {ts}")
 
         if sensor == "PE1":
             # 创建新轨迹
@@ -196,8 +191,6 @@ class RuntimeService:
         elif sensor == "PE2":
             # 匹配轨迹
             track = self.track_manager.match_track_for_pe2(ts)
-            if self._scene_pe2_on_ts is None:
-                self._scene_pe2_on_ts = track.pe2_on_ts
 
             if track is None:
                 self.logger.warning("[PE2] 没有匹配的轨迹")
@@ -260,14 +253,12 @@ class RuntimeService:
             return
 
         print(f"len of active_tracks: {len(active_tracks)}")
-        active_track_time = active_tracks[0].pe2_on_ts
-
         # 构建 CameraResult 对象
         camera_result = CameraResult(
             camera_id=camera_id,
             code=payload.get("code"),
             raw_payload=payload,
-            ts_ms=payload.get("ts_ms", 0) / 1000 + active_track_time,
+            ts_ms=payload.get("ts_ms", 0) / 1000,
             result="TRUE" if payload.get("result") == "TRUE" else "FALSE",
             symbology=payload.get("symbology")
         )
@@ -287,7 +278,7 @@ class RuntimeService:
         await self.repository.save_camera_result({
             "track_id": track.track_id,
             "camera_id": camera_id,
-            "result": "OK" if camera_result.result == "OK" else "NG",
+            "result": "OK" if camera_result.result == "TRUE" else "FALSE",
             "code": camera_result.code,
             "symbology": camera_result.symbology,
             "ts_ms": camera_result.ts_ms

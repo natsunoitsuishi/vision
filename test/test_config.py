@@ -12,7 +12,7 @@ def test_config():
         await load_config()
 
         # 获取配置
-        db_path = get_config("database")
+        db_path = get_config("photoelectric.host")
 
         print(db_path)
 

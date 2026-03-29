@@ -272,7 +272,7 @@ class AdvancedDecisionEngine(DecisionEngine):
         Returns:
             最终决策状态
         """
-        successful_results = [r for r in track.camera_results if r.result == "OK"]
+        successful_results = [r for r in track.camera_results if r.result == "TRUE"]
         unique_codes = list(set([r.code for r in successful_results if r.code]))
 
         # 按顺序评估规则

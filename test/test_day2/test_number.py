@@ -6,12 +6,15 @@ count_dict = defaultdict(int)
 
 def test_number():
     count_numbers = 1
+    tim = 0
+
     with open(get_project_root() / "devices" / "log.txt", "r", encoding="utf-8") as f:
         for line in f:
-            if 200 <= count_numbers: # 4404
+            if 2 <= count_numbers:
                 line = line.strip()
                 content = line[19:].strip()
-                print(content)
+                tim = line[:19].strip()
+
                 seen = set()
                 for ch in content:
                     if ch.isdigit():
@@ -21,10 +24,12 @@ def test_number():
                 for num in seen:
                     count_dict[num] += 1
 
-                print("各数字出现的总次数:")
-                for num in sorted(count_dict.keys()):
-                    print(f"数字 {num}: {count_dict[num]}")
             count_numbers += 1
+
+    print("各数字出现的总次数:")
+    for num in sorted(count_dict.keys()):
+        if count_dict[num] > 0:
+            print(f"数字 {num}: {count_dict[num]},  {tim}")
 
 # def test_ip_192_168_1_117():
 #     import socket

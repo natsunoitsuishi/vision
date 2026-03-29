@@ -11,9 +11,14 @@ logging:
   console_enabled: true
   console_color: true
 
+photoelectric:
+  host: 192.168.1.117
+  port: 500
+  timeout: 3.0
+
 database:
-  path: "data/vision_gate.db"
-  echo: false  # 是否打印SQL语句
+  a: "data/vision_gate.db"
+  b: false  # 是否打印SQL语句
 
 #dio:
 #  type: "simulator"  # simulator / rk3588_dio
