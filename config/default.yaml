@@ -54,3 +54,7 @@ track:
 decision:
   require_all_cameras: true  # 是否需要所有相机都成功
   ok_condition: "any_success"  # any_success / all_success
+
+
+pe1_to_pe2_dist: 0.39
+pe2_to_camera_dist: 0.36

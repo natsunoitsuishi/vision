@@ -279,17 +279,12 @@ class PhotoelectricClient:
     #         self.logger.error(f"写入线圈失败: address={address}, value={value}, error={e}")
     #         raise
 
-# =============================
-# 使用示例
-# =============================
-
 if __name__ == '__main__':
     from pymodbus.client import ModbusTcpClient
     import time
     # 模块默认IP和端口
     async def main():
         await load_config()
-    # 模块默认IP和端口
 
         IP = get_config("photoelectric.host", "192.168.1.117")
 
@@ -309,11 +304,15 @@ if __name__ == '__main__':
                 pe1 = result.bits[0]
                 # 光电2 = DI2 = 地址1
                 pe2 = result.bits[1]
-                print(f"光电1状态: {pe1}  |  光电2状态: {pe2}")
+
+                if pe1:
+                    print(f"光电1状态: {pe1}")
+                if pe2:
+                    print(f"                   |  光电2状态: {pe2}")
             else:
                 print("读取失败")
 
-            time.sleep(0.01)
+            time.sleep(0.1)
         client.close()
 
     asyncio.run(main())

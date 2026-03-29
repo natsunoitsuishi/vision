@@ -19,6 +19,7 @@ from domain.scheduler import TriggerScheduler
 from domain.track_manager import TrackManager
 from infra.db.repository import SQLiteRepository
 from infra.logging.setup import setup_logging, get_logger
+from services import ArchiveService, SystemLayout
 from services.event_bus import EventBus
 from services.runtime_service import RuntimeService
 
@@ -99,7 +100,7 @@ class AppController:
         # 运行时服务
         self.runtime_service: Optional[RuntimeService] = None
         # self.health_service: Optional[HealthService] = None
-        # self.archive_service: Optional[ArchiveService] = None
+        self.archive_service: Optional[ArchiveService] = None
 
         # UI
         self.main_window: Optional[MainWindow] = None
@@ -195,6 +196,18 @@ class AppController:
             await self.mes_client.connect()
             self.logger.info("MES 客户端已启动")
 
+            # 位置推算服务
+            self.archive_service = ArchiveService(
+                layout=SystemLayout(
+                    pe1_position_mm=0,
+                    pe2_position_mm=1200,
+                    camera1_position_mm=400,
+                    camera2_position_mm=800,
+                    conveyor_length_mm=1500,
+                    default_speed_mm_s=get_config("conveyor.default_speed_mm_s", 500)
+                )
+            )
+
             # 5. 运行时服务层 - 整合所有模块，启动核心业务循环
             self.state = AppState.INIT_RUNTIME
             self.runtime_service = RuntimeService(
@@ -209,6 +222,7 @@ class AppController:
                 self.repository,
                 self.scheduler_client,
                 self.mes_client,
+                self.archive_service
             )
             await self.runtime_service.start()
 
@@ -351,14 +365,14 @@ class AppController:
     async def _health_check_loop(self):
         pass
         # """健康检查循环"""
-        # while True:
-        #     try:
-        #         await asyncio.sleep(30)  # 每30秒检查一次
-        #         if self.runtime:
-        #             health_status = await self.runtime.health_check()
-        #             if not health_status["healthy"]:
-        #                 self.logger.warning(f"健康检查异常: {health_status}")
-        #     except asyncio.CancelledError:
-        #         break
-        #     except Exception as e:
-        #         self.logger.error(f"健康检查失败: {e}")
+        while True:
+            try:
+                await asyncio.sleep(30)  # 每30秒检查一次
+                if self.runtime:
+                    health_status = await self.runtime.health_check()
+                    if not health_status["healthy"]:
+                        self.logger.warning(f"健康检查异常: {health_status}")
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                self.logger.error(f"健康检查失败: {e}")

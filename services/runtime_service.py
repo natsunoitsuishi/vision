@@ -20,6 +20,7 @@ from domain.scan_session import ScanSessionController
 from domain.scheduler import TriggerScheduler
 from domain.track_manager import TrackManager
 from infra.db.repository import SQLiteRepository
+from services import ArchiveService
 from services.event_bus import EventBus
 
 
@@ -47,6 +48,7 @@ class RuntimeService:
             repository: SQLiteRepository,
             scheduler_client: SchedulerClient,
             mes_client: MesClient,
+            archive_service: ArchiveService,
     ):
         """
         初始化运行时服务
@@ -74,6 +76,7 @@ class RuntimeService:
         self.repository = repository
         self.scheduler_client = scheduler_client
         self.mes_client = mes_client
+        self.archive_service = archive_service
 
         # 运行时状态
         self._running = False
@@ -198,16 +201,16 @@ class RuntimeService:
                 return
 
             # 计算速度
-            if track.pe1_on_ts:
-                time_diff = ts - track.pe1_on_ts
+            if track.pe1_on_ms:
+                time_diff = ts - track.pe1_on_ms
                 sensor_distance = get_config("trigger", {}).get("sensor_distance_mm", 120)
                 if time_diff > 0:
                     track.speed_mm_s = sensor_distance / time_diff
                 else:
-                    track.speed_mm_s = get_config("runtime", {}).get("line_speed_mm_s", 800)
+                    logging.error("error for time !!!")
 
             # 打开扫描窗口
-            self.trigger_scheduler.open_scan_window(track, self._current_mode)
+            self.trigger_scheduler.open_scan_window(track, track.speed_mm_s, track.pe2_on_ms)
 
             # 确保扫码会话运行
             await self.scan_session_controller.ensure_running()
@@ -232,7 +235,6 @@ class RuntimeService:
             track = self.track_manager.match_last_open_track()
             if track:
                 track.pe1_off_ts = ts
-                self.trigger_scheduler.prepare_window_close(track, ts)
                 self.logger.info(f"[PE1下降] 准备关闭轨迹窗口: {track.track_id}")
             else:
                 self.logger.debug("[PE1下降] 没有打开的轨迹窗口")
@@ -309,7 +311,6 @@ class RuntimeService:
             self.logger.info(
                 f"[相机{camera_id}] 轨迹 {track.track_id} 已收到 {len(track.camera_results)}/2 个结果，继续等待")
 
-
     async def _on_camera_heartbeat(self, event: AppEvent) -> None:
         """处理相机心跳事件"""
         camera_id = event.payload.get("camera_id")
@@ -362,36 +363,9 @@ class RuntimeService:
 
     async def _output_result(self, track: BoxTrack) -> None:
         """
-        输出结果
-
-        1. 输出到 DO 脉冲
-        2. 保存到数据库
-        3. 上报到调度系统
-        4. 最终化轨迹
         """
         self.logger.info(f"[输出] 轨迹 {track.track_id}: "
                          f"状态={track.final_status.value}, 码值={track.final_code}")
-
-        # # 更新统计
-        # if track.final_status == DecisionStatus.OK:
-        #     self.stats["ok_count"] += 1
-        #     # 输出 OK 脉冲
-        #     await self.photoelectric_client.write_pulse("ok")
-        # elif track.final_status == DecisionStatus.NO_READ:
-        #     self.stats["ng_count"] += 1
-        #     await self.photoelectric_client.write_pulse("ng")
-        #     await self.photoelectric_client.write_pulse("reject")
-        # elif track.final_status == DecisionStatus.AMBIGUOUS:
-        #     self.stats["ambiguous_count"] += 1
-        #     await self.photoelectric_client.write_pulse("ng")
-        #     await self.photoelectric_client.write_pulse("reject")
-        # elif track.final_status == DecisionStatus.TIMEOUT:
-        #     self.stats["timeout_count"] += 1
-        #     await self.photoelectric_client.write_pulse("ng")
-        #     await self.photoelectric_client.write_pulse("reject")
-        # elif track.final_status == DecisionStatus.FAULT:
-        #     self.stats["fault_count"] += 1
-        #     await self.photoelectric_client.write_pulse("ng")
 
         # 保存扫描记录到数据库
         await self.repository.save_scan_record({
@@ -439,7 +413,8 @@ class RuntimeService:
         self.track_manager.finalize_track(track.track_id, final_status)
 
         # 检查是否应该停止扫码会话
-        await self.scan_session_controller.stop_if_idle()
+        if True:
+            await self.scan_session_controller.stop_if_idle()
 
         # 通知 UI 更新
         await self._notify_ui_result(track)

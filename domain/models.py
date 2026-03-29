@@ -112,22 +112,22 @@ class BoxTrack:
     """核心领域模型：每个经过视觉门的鞋盒对应一个BoxTrack"""
     track_id:           str                  # 跟踪ID，唯一标识一个鞋盒跟踪记录
     mode:               RunMode              # 运行模式，如测试模式、生产模式等
-    created_ts:         float                # 创建时间戳（秒），跟踪记录创建时间
+    created_ms:         float                # 创建时间戳（秒），跟踪记录创建时间
 
     # PE 信号时间戳（光电传感器信号）
-    pe1_on_ts:          Optional[float] = None  # PE1（入口光电）上升沿时间，检测到物体进入
-    pe1_off_ts:         Optional[float] = None  # PE1（入口光电）下降沿时间，物体离开
-    pe2_on_ts:          Optional[float] = None  # PE2（出口光电）上升沿时间，检测到物体到达出口
-    pe2_off_ts:         Optional[float] = None  # PE2（出口光电）下降沿时间，物体离开出口
+    pe1_on_ms:          Optional[float] = None  # PE1（入口光电）上升沿时间，检测到物体进入
+    pe1_off_ms:         Optional[float] = None  # PE1（入口光电）下降沿时间，物体离开
+    pe2_on_ms:          Optional[float] = None  # PE2（出口光电）上升沿时间，检测到物体到达出口
+    pe2_off_ms:         Optional[float] = None  # PE2（出口光电）下降沿时间，物体离开出口
 
     # 物理参数
     speed_mm_s:     Optional[float]     = None   # 速度（毫米/秒），鞋盒通过速度
     length_mm:      Optional[float]     = None   # 长度（毫米），鞋盒物理长度
 
     # 扫描窗口
-    scan_window_start_ts:   Optional[float] = None   # 扫描窗口开始时间，允许扫描的时间段起点
-    scan_window_end_ts:     Optional[float] = None   # 扫描窗口结束时间，允许扫描的时间段终点
-    first_ok_ts:            Optional[float] = None   # 首次成功识别时间戳，第一次成功读到条码的时间
+    scan_window_start_ms:   Optional[float] = None   # 扫描窗口开始时间，允许扫描的时间段起点
+    scan_window_end_ms:     Optional[float] = None   # 扫描窗口结束时间，允许扫描的时间段终点
+    first_ok_ms:            Optional[float] = None   # 首次成功识别时间戳，第一次成功读到条码的时间
     scan_close_reason:      Optional[str]   = None   # 扫描关闭原因，为何结束扫描（如超时/成功/异常）
 
     # 状态和结果

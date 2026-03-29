@@ -10,7 +10,6 @@ from copy import deepcopy
 import scripts.util
 from scripts.util import get_project_config_path
 
-
 class ConfigError(Exception):
     """配置错误异常"""
     pass

@@ -8,6 +8,7 @@ from typing import List, Optional, Dict
 from datetime import datetime
 import logging
 
+from config import get_config
 from domain.models import BoxTrack, CameraResult
 from domain.enums import TrackStatus, DecisionStatus, RunMode
 
@@ -29,16 +30,12 @@ class TrackManager:
     - 如果存在重叠歧义，立即报警
     """
 
-    def __init__(self, ttl_ms: int = 1500):
+    def __init__(self):
         """
         初始化轨迹管理器
-
-        Args:
-            ttl_ms: 轨迹生存时间（毫秒），超时后自动清理
         """
-        self._active_tracks: List[BoxTrack] = []  # 按创建时间排序的活动轨迹
-        self._finished_tracks: List[BoxTrack] = []  # 已完成的轨迹（用于归档）
-        self._ttl_ms = ttl_ms
+        self._active_tracks: List[BoxTrack] = []        # 按创建时间排序的活动轨迹
+        self._finished_tracks: List[BoxTrack] = []      # 已完成的轨迹（用于归档）
         self._logger = logging.getLogger(__name__)
 
     def create_track(self, ts: float = None, mode: RunMode = RunMode.LR) -> BoxTrack:
@@ -52,10 +49,8 @@ class TrackManager:
         Returns:
             新创建的轨迹对象
         """
-        #
-        # TODO 设置 PE1 上升沿时间戳为 (相对时间 0, 绝对时间 )
         if ts is None:
-            ts = time.time()
+            ts = time.time_ns() / 1_000_000
 
         # 生成唯一轨迹ID
         track_id = self._generate_track_id(ts)
@@ -64,14 +59,14 @@ class TrackManager:
         track = BoxTrack(
             track_id=track_id,
             mode=mode,
-            created_ts=ts,
-            pe1_on_ts=ts,
+            created_ms=ts,
+            pe1_on_ms=ts,
             status=TrackStatus.CREATED
         )
 
         # 添加到活动轨迹列表（保持时间顺序）
         self._active_tracks.append(track)
-        self._active_tracks.sort(key=lambda t: t.created_ts)
+        self._active_tracks.sort(key=lambda t: t.created_ms)
 
         self._logger.info(f"[TrackManager] 创建轨迹: {track_id}, 模式={mode.value}, "
                           f"活动轨迹数={len(self._active_tracks)}")
@@ -92,11 +87,11 @@ class TrackManager:
         Returns:
             匹配到的轨迹，如果没有则返回 None
         """
-        # 查找第一个尚未设置 pe2_on_ts 的轨迹
-        unmatched_tracks = [t for t in self._active_tracks if t.pe2_on_ts is None]
+        # 查找第一个尚未设置 pe2_on_ms 的轨迹
+        unmatched_tracks = [t for t in self._active_tracks if t.pe2_on_ms is None]
 
         if not unmatched_tracks:
-            self._logger.warning(f"[TrackManager] PE2 触发但没有等待的轨迹")
+            self._logger.error(f"[TrackManager] PE2 触发但没有等待的轨迹")
             return None
 
         # 如果有多个轨迹在等待 PE2，可能存在重叠歧义
@@ -109,11 +104,11 @@ class TrackManager:
 
         # 返回最早创建的轨迹
         track = unmatched_tracks[0]
-        track.pe2_on_ts = ts
+        track.pe2_on_ms = ts
         track.status = TrackStatus.TRACKING
 
         self._logger.info(f"[TrackManager] PE2 匹配轨迹: {track.track_id}, "
-                          f"pe2_on_ts={ts}, 剩余等待轨迹={len(unmatched_tracks) - 1}")
+                          f"pe2_on_ms={ts}, 剩余等待轨迹={len(unmatched_tracks) - 1}")
 
         return track
 
@@ -126,7 +121,7 @@ class TrackManager:
         """
         # 查找有扫描窗口且未完成的轨迹
         open_tracks = [t for t in self._active_tracks
-                       if t.scan_window_start_ts is not None
+                       if t.scan_window_start_ms is not None
                        and t.status not in [TrackStatus.FINALIZED, TrackStatus.EXPIRED]]
 
         if not open_tracks:
@@ -194,25 +189,25 @@ class TrackManager:
 
         return track
 
-    def cleanup_expired(self, now_ts: float = None) -> List[BoxTrack]:
+    def cleanup_expired(self, now_ms: float = None) -> List[BoxTrack]:
         """
         清理超时轨迹
 
         Args:
-            now_ts: 当前时间戳，默认当前时间
+            now_ms: 当前时间戳，默认当前时间
 
         Returns:
             被清理的轨迹列表
         """
-        if now_ts is None:
-            now_ts = time.time()
+        if now_ms is None:
+            now_ms = time.time_ns() / 1_000_000
 
         expired_tracks = []
         remaining_tracks = []
 
         for track in self._active_tracks:
             # 检查是否超时
-            if (now_ts - track.created_ts) * 1000 > self._ttl_ms:
+            if now_ms - track.created_ms > get_config("track.ttl_ms", 1500):
                 # 超时轨迹
                 track.status = TrackStatus.EXPIRED
                 if track.final_status is None:
@@ -220,7 +215,7 @@ class TrackManager:
                 expired_tracks.append(track)
                 self._finished_tracks.append(track)
                 self._logger.warning(f"[TrackManager] 轨迹超时: {track.track_id}, "
-                                     f"创建时间={track.created_ts}, 超时={self._ttl_ms}ms")
+                                     f"创建时间={track.created_ms}, 超时={get_config('track.ttl_ms', 1500)}ms")
             else:
                 remaining_tracks.append(track)
 
@@ -284,7 +279,7 @@ class TrackManager:
         if track is None:
             return False
 
-        track.scan_window_start_ts = window_start_ts
+        track.scan_window_start_ms = window_start_ts
         track.scan_window_end_ts = window_end_ts
         track.status = TrackStatus.WINDOW_OPEN
 
@@ -353,7 +348,7 @@ class TrackManager:
                 {
                     "track_id": t.track_id,
                     "status": t.status.value,
-                    "created_ts": t.created_ts,
+                    "created_ms": t.created_ms,
                     "has_result": len(t.camera_results) > 0
                 }
                 for t in self._active_tracks
@@ -388,17 +383,6 @@ class TrackManager:
         timestamp = datetime.fromtimestamp(ts).strftime("%Y%m%d%H%M%S")
         short_uuid = str(uuid.uuid4())[:8]
         return f"T{timestamp}_{short_uuid}"
-
-    @property
-    def ttl_ms(self) -> int:
-        """获取轨迹超时时间（毫秒）"""
-        return self._ttl_ms
-
-    @ttl_ms.setter
-    def ttl_ms(self, value: int):
-        """设置轨迹超时时间（毫秒）"""
-        self._ttl_ms = value
-        self._logger.info(f"[TrackManager] 更新超时时间: {value}ms")
 
     @property
     def active_count(self) -> int:

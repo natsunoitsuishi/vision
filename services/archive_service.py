@@ -1,7 +1,4 @@
 # services/archive_service.py
-"""
-鞋盒位置推算服务 - 实时追踪鞋盒在传送带上的位置
-"""
 import asyncio
 import logging
 import time
@@ -94,7 +91,6 @@ class BoxPosition:
             "pe2_rise_ts": self.pe2_rise_ts,
             "pe2_fall_ts": self.pe2_fall_ts
         }
-
 
 @dataclass
 class SystemLayout:
