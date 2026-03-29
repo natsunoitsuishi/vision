@@ -2,7 +2,8 @@
 """
 结果绑定器 - 将相机结果绑定到正确的鞋盒轨迹
 """
-import logging
+
+from infra import get_logger
 from typing import List, Optional, Tuple
 
 from config import get_config
@@ -69,11 +70,11 @@ def _select_best_match(result: CameraResult, candidates: List[BoxTrack]) -> Opti
     best_distance = float('inf')
 
     for track in candidates:
-        if track.scan_window_start_ts is None or track.scan_window_end_ts is None:
+        if track.scan_window_start_ms is None or track.scan_window_end_ms is None:
             continue
 
         # 计算窗口中心
-        window_center = (track.scan_window_start_ts + track.scan_window_end_ts) / 2.0
+        window_center = (track.scan_window_start_ms + track.scan_window_end_ms) / 2.0
 
         # 计算距离
         distance = abs(result.ts_ms - window_center)
@@ -83,7 +84,7 @@ def _select_best_match(result: CameraResult, candidates: List[BoxTrack]) -> Opti
             best_track = track
         elif abs(distance - best_distance) < 0.001:  # 距离相等
             # 选择更早创建的
-            if best_track and track.created_ts < best_track.created_ts:
+            if best_track and track.created_ms < best_track.created_ms:
                 best_track = track
 
     return best_track
@@ -109,7 +110,7 @@ class ResultBinder:
             config: 配置字典，包含时间窗容差等参数
         """
         self._window_tolerance_ms = get_config("window_tolerance_ms", 50)  # 窗口边界容差（毫秒）
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__)
 
         # 统计信息
         self._stats = {
@@ -181,11 +182,11 @@ class ResultBinder:
 
         for track in active_tracks:
             # 检查轨迹是否有有效的时间窗
-            if track.scan_window_start_ts is None or track.scan_window_end_ts is None:
+            if track.scan_window_start_ms is None or track.scan_window_end_ms is None:
                 continue
 
             # 检查时间戳是否在窗口内（带容差）
-            if self._is_in_window(result.ts_ms, track.scan_window_start_ts, track.scan_window_end_ts):
+            if self._is_in_window(result.ts_ms, track.scan_window_start_ms, track.scan_window_end_ms):
                 candidates.append(track)
 
         return candidates

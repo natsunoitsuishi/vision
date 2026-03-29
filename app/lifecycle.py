@@ -25,10 +25,6 @@ from services.runtime_service import RuntimeService
 
 from ui.main_window import MainWindow
 
-# from domain.alarm_service import AlarmService
-# from services.health_service import HealthService
-# from services.archive_service import ArchiveService
-
 class AppState(Enum):
     """应用状态枚举"""
     BOOT = "BOOT"

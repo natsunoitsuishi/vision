@@ -2,10 +2,10 @@
 app:
   name: "Vision Gate"
   version: "1.0.0"
-  environment: "development"  # development/production
+  environment: "development"
 
 logging:
-  level: "INFO"
+  level: "DEBUG"
   file_enabled: true
   file_path: "logs/vision_gate.log"
   console_enabled: true
@@ -16,37 +16,10 @@ photoelectric:
   port: 500
   timeout: 3.0
 
-database:
-  a: "data/vision_gate.db"
-  b: false  # 是否打印SQL语句
-
-#dio:
-#  type: "simulator"  # simulator / rk3588_dio
-#  pin_photoeye1: 17
-#  pin_photoeye2: 18
-#  poll_interval: 0.01  # 轮询间隔（秒）
-#
-#cameras:
-#  - id: 1
-#    type: "simulator"  # simulator / opt
-#    name: "入口相机"
-#    host: "192.168.1.101"
-#    port: 8000
-#    timeout: 3.0
-#    success_rate: 0.95  # 模拟器用
-#
-#  - id: 2
-#    type: "simulator"
-#    name: "出口相机"
-#    host: "192.168.1.102"
-#    port: 8000
-#    timeout: 3.0
-#    success_rate: 0.95
-
-scheduler:
-  scan_window: 5.0      # 扫码窗口时间（秒）
-  max_retries: 3         # 最大重试次数
-  retry_interval: 0.2    # 重试间隔（秒）
+#scheduler:
+#  scan_window: 5.0      # 扫码窗口时间（秒）
+#  max_retries: 3         # 最大重试次数
+#  retry_interval: 0.2    # 重试间隔（秒）
 
 track:
   timeout: 30.0          # 轨迹超时时间（秒）

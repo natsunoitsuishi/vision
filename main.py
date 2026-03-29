@@ -4,7 +4,6 @@
 """
 import asyncio
 import sys
-import logging
 from pathlib import Path
 
 from app.lifecycle import AppController
@@ -14,6 +13,7 @@ from app.lifecycle import AppController
 
 from PySide6.QtWidgets import QApplication
 from qasync import QEventLoop
+from infra import get_logger
 
 def main() -> None:
     """
@@ -48,7 +48,7 @@ def main() -> None:
         print("\n收到中断信号，正在关闭...")
     except Exception as e:
         print(f"程序异常退出: {e}")
-        logging.exception("程序异常退出")
+        get_logger(__name__).exception("程序异常退出")
     finally:
         # 确保资源被释放
         try:

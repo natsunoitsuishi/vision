@@ -209,12 +209,11 @@ class RuntimeService:
             # 计算速度
             if track.pe1_on_ms is not None:
                 time_diff = timestamp - track.pe1_on_ms
-                print(time_diff)
                 sensor_distance = get_config("pe1_to_pe2_dist")
                 if time_diff > 0:
                     track.speed_mm_s = sensor_distance / time_diff
                 else:
-                    logging.error("error for time !!!")
+                    self.logger.error("error for time !!!")
 
             # 打开扫描窗口
             self.trigger_scheduler.open_scan_window(track, track.speed_mm_s, track.pe2_on_ms)
@@ -223,7 +222,7 @@ class RuntimeService:
             await self.scan_session_controller.ensure_running()
 
             self.logger.info(f"[PE2] 匹配轨迹: {track.track_id}, "
-                             f"速度={track.speed_mm_s:.1f}mm/s, "
+                             f"速度={track.speed_mm_s:.10f}mm/s, "
                              f"窗口={track.scan_window_start_ms}~{track.scan_window_end_ms}")
 
             # 通知 UI 更新
