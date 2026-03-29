@@ -165,7 +165,7 @@ class DeviceHealth:
     device_id: str                      # 设备ID，唯一标识一个设备
     device_type: str                    # 设备类型，如相机/光电传感器/控制器等
     status: DeviceStatus                # 设备状态（在线/离线/故障/维护中）
-    last_heartbeat_ts: float | None     # 最后心跳时间戳，最后一次收到设备心跳的时间
+    last_heartbeat_ms: float | None     # 最后心跳时间戳，最后一次收到设备心跳的时间
     message: str = ""                   # 状态消息，附加的状态说明或错误信息
 
 

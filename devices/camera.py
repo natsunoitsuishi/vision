@@ -1,10 +1,10 @@
 # devices/camera/base.py
 import asyncio
 import logging
-import socket
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Optional
+import socket
+import time
 
 from config.manager import get_config
 from domain.enums import DeviceStatus, EventType
@@ -27,7 +27,7 @@ class BaseCameraClient(ABC):
             device_id=str(camera_id),
             device_type="camera",
             status=DeviceStatus.OFFLINE,
-            last_heartbeat_ts=None,
+            last_heartbeat_ms=None,
             message=""
         )
         self._last_heartbeat = 0
@@ -81,6 +81,14 @@ class BaseCameraClient(ABC):
     async def _publish_result(self, result: CameraResult) -> None:
        self.logger.info(f"[CAM{self.camera_id}] 发布结果事件: {result}")
 
+       # return CameraResult(
+       #     camera_id=camera_id,
+       #     result=result_str,
+       #     code=code,
+       #     symbology=symbology,
+       #     ts_ms=ts_ms,
+       # )
+
        # 发布相机结果事件
        self.event_bus.emit(
            event_type=EventType.CAMERA_RESULT,
@@ -90,9 +98,7 @@ class BaseCameraClient(ABC):
                "result": result.result,
                "code": result.code,
                "symbology": result.symbology,
-               "ts_ms": result.ts_ms,
-               "raw_data": result.raw_data if hasattr(result, 'raw_data') else None,
-               "timestamp": datetime.now().timestamp()
+               "ts_ms": result.ts_ms
            }
        )
 
@@ -102,7 +108,7 @@ class BaseCameraClient(ABC):
         if self._health.status != status:
             self._health.status = status
             self._health.message = message
-            self._health.last_heartbeat_ts = datetime.now().timestamp()
+            self._health.last_heartbeat_ms = time.time_ns() / 1_000_000
             self.logger.info(f"[CAM{self.camera_id}] 状态 -> {status.value} {message}")
 
             # 发布设备状态变化事件
@@ -114,7 +120,7 @@ class BaseCameraClient(ABC):
                     "device_type": "camera",
                     "status": status.value,
                     "message": message,
-                    "timestamp": datetime.now().timestamp()
+                    "timestamp": time.time_ns() / 1_000_000
                 }
             )
 
@@ -126,18 +132,18 @@ def _parse_to_camera_result(data: dict) -> CameraResult:
     camera_id = 1
 
     # 提取字段
-    result_str = data.get("result", "FALSE")
-    code = data.get("code")
-    symbology = data.get("symbology")
-    ts_ms = time.time_ns() // 1000000
+    result_str      =   data.get("result", "FALSE")
+    code            =   data.get("code")
+    symbology       =   data.get("symbology")
+    ts_ms           =   time.time_ns() // 1000000
 
     # 创建CameraResult对象
     return CameraResult(
-        camera_id=camera_id,
-        result=result_str,
-        code=code,
-        symbology=symbology,
-        ts_ms=ts_ms,
+        camera_id   =   camera_id,
+        result      =   result_str,
+        code        =   code,
+        symbology   =   symbology,
+        ts_ms       =   ts_ms,
     )
 
 class OptCameraClient(BaseCameraClient):
@@ -265,7 +271,7 @@ class OptCameraClient(BaseCameraClient):
         """处理单条JSON消息"""
         try:
             # 更新心跳时间
-            self._last_heartbeat = datetime.now().timestamp()
+            self._last_heartbeat = time.time_ns() / 1_000_000
 
             # 转换为CameraResult
             camera_result = _parse_to_camera_result(data)

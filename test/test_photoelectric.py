@@ -208,7 +208,7 @@ def test_photoelectric():
         print(f"  设备类型: {health.device_type}")
         print(f"  状态: {health.status.value}")
         print(f"  消息: {health.message}")
-        print(f"  最后心跳: {health.last_heartbeat_ts}")
+        print(f"  最后心跳: {health.last_heartbeat_ms}")
 
         print("✅ 健康检查完成")
 

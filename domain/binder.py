@@ -5,8 +5,89 @@
 import logging
 from typing import List, Optional, Tuple
 
+from config import get_config
 from .enums import DecisionStatus
 from .models import BoxTrack, CameraResult
+
+
+def resolve_final_code(track: BoxTrack) -> Tuple[Optional[str], Optional[DecisionStatus]]:
+    """
+    解析轨迹的最终码值和状态
+
+    Args:
+        track: 轨迹对象
+
+    Returns:
+        (final_code, final_status) 如果已满足判定条件则返回，否则返回 (None, None)
+    """
+    if not track.camera_results:
+        return None, None
+
+    # 检查是否已经读到有效码
+    successful_results = [r for r in track.camera_results if r.result == "OK"]
+
+    if not successful_results:
+        return None, None
+
+    # 收集所有成功的结果
+    codes = [r.code for r in successful_results if r.code]
+    unique_codes = list(set(codes))
+
+    # 判断是否有足够的信息做出决策
+    # 这里返回码值和状态，由 DecisionEngine 做最终判定
+    if unique_codes:
+        # 有成功的结果，返回第一个码值（后续由 DecisionEngine 处理冲突）
+        return unique_codes[0], None
+
+    return None, None
+
+
+def _select_best_match(result: CameraResult, candidates: List[BoxTrack]) -> Optional[BoxTrack]:
+    """
+    从候选轨迹中选择最佳匹配
+
+    规则：
+    1. 如果只有一个候选，直接返回
+    2. 如果有多个候选，选择距离窗口中心最近的
+    3. 如果距离相同，选择最早创建的
+
+    Args:
+        result: 相机结果
+        candidates: 候选轨迹列表
+
+    Returns:
+        最佳匹配轨迹
+    """
+    if not candidates:
+        return None
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    # 多个候选，计算每个候选的距离窗口中心的距离
+    best_track = None
+    best_distance = float('inf')
+
+    for track in candidates:
+        if track.scan_window_start_ts is None or track.scan_window_end_ts is None:
+            continue
+
+        # 计算窗口中心
+        window_center = (track.scan_window_start_ts + track.scan_window_end_ts) / 2.0
+
+        # 计算距离
+        distance = abs(result.ts_ms - window_center)
+
+        if distance < best_distance - 0.001:  # 有更小的距离
+            best_distance = distance
+            best_track = track
+        elif abs(distance - best_distance) < 0.001:  # 距离相等
+            # 选择更早创建的
+            if best_track and track.created_ts < best_track.created_ts:
+                best_track = track
+
+    return best_track
+
 
 class ResultBinder:
     """
@@ -20,15 +101,14 @@ class ResultBinder:
     5. 未命中任何活动轨迹时，记录 UNBOUND_RESULT
     """
 
-    def __init__(self, config: dict = None):
+    def __init__(self):
         """
         初始化结果绑定器
 
         Args:
             config: 配置字典，包含时间窗容差等参数
         """
-        self.config = config or {}
-        self._window_tolerance_ms = self.config.get("window_tolerance_ms", 50)  # 窗口边界容差（毫秒）
+        self._window_tolerance_ms = get_config("window_tolerance_ms", 50)  # 窗口边界容差（毫秒）
         self._logger = logging.getLogger(__name__)
 
         # 统计信息
@@ -66,7 +146,7 @@ class ResultBinder:
             return None
 
         # 根据规则选择最佳匹配
-        best_track = self._select_best_match(result, candidates)
+        best_track = _select_best_match(result, candidates)
 
         if best_track is None:
             self._logger.warning(f"相机结果匹配歧义: camera={result.camera_id}, "
@@ -85,37 +165,6 @@ class ResultBinder:
                            f"camera={result.camera_id}, ts={result.ts_ms:.3f}")
 
         return best_track
-
-    def resolve_final_code(self, track: BoxTrack) -> Tuple[Optional[str], Optional[DecisionStatus]]:
-        """
-        解析轨迹的最终码值和状态
-
-        Args:
-            track: 轨迹对象
-
-        Returns:
-            (final_code, final_status) 如果已满足判定条件则返回，否则返回 (None, None)
-        """
-        if not track.camera_results:
-            return None, None
-
-        # 检查是否已经读到有效码
-        successful_results = [r for r in track.camera_results if r.result == "OK"]
-
-        if not successful_results:
-            return None, None
-
-        # 收集所有成功的结果
-        codes = [r.code for r in successful_results if r.code]
-        unique_codes = list(set(codes))
-
-        # 判断是否有足够的信息做出决策
-        # 这里返回码值和状态，由 DecisionEngine 做最终判定
-        if unique_codes:
-            # 有成功的结果，返回第一个码值（后续由 DecisionEngine 处理冲突）
-            return unique_codes[0], None
-
-        return None, None
 
     def _find_candidate_tracks(self, result: CameraResult, active_tracks: List[BoxTrack]) -> List[BoxTrack]:
         """
@@ -155,52 +204,6 @@ class ResultBinder:
         """
         tolerance = self._window_tolerance_ms / 1000.0  # 转换为秒
         return start - tolerance <= ts <= end + tolerance
-
-    def _select_best_match(self, result: CameraResult, candidates: List[BoxTrack]) -> Optional[BoxTrack]:
-        """
-        从候选轨迹中选择最佳匹配
-
-        规则：
-        1. 如果只有一个候选，直接返回
-        2. 如果有多个候选，选择距离窗口中心最近的
-        3. 如果距离相同，选择最早创建的
-
-        Args:
-            result: 相机结果
-            candidates: 候选轨迹列表
-
-        Returns:
-            最佳匹配轨迹
-        """
-        if not candidates:
-            return None
-
-        if len(candidates) == 1:
-            return candidates[0]
-
-        # 多个候选，计算每个候选的距离窗口中心的距离
-        best_track = None
-        best_distance = float('inf')
-
-        for track in candidates:
-            if track.scan_window_start_ts is None or track.scan_window_end_ts is None:
-                continue
-
-            # 计算窗口中心
-            window_center = (track.scan_window_start_ts + track.scan_window_end_ts) / 2.0
-
-            # 计算距离
-            distance = abs(result.ts_ms - window_center)
-
-            if distance < best_distance - 0.001:  # 有更小的距离
-                best_distance = distance
-                best_track = track
-            elif abs(distance - best_distance) < 0.001:  # 距离相等
-                # 选择更早创建的
-                if best_track and track.created_ts < best_track.created_ts:
-                    best_track = track
-
-        return best_track
 
     def get_stats(self) -> dict:
         """获取绑定统计信息"""

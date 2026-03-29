@@ -1,6 +1,7 @@
 # devices/modbus_client.py
 import asyncio
 import logging
+import time
 from datetime import datetime
 from typing import Optional, Tuple
 
@@ -45,7 +46,7 @@ class PhotoelectricClient:
             device_id="modbus",
             device_type="photoelectric",
             status=DeviceStatus.OFFLINE,
-            last_heartbeat_ts=None,
+            last_heartbeat_ms=None,
             message=""
         )
 
@@ -172,7 +173,7 @@ class PhotoelectricClient:
 
     async def _publish_di_event(self, di1: bool, di2: bool) -> None:
         """发布 DI 事件"""
-        timestamp = datetime.now().timestamp()
+        timestamp = time.time_ns() / 1_000_000
 
         # DI1 变化 (光电1)
         if di1 != self._last_di1:
@@ -183,7 +184,7 @@ class PhotoelectricClient:
                 event_type=event_type,
                 source="di1_modbus_client",
                 payload={
-                    "sensor": "PE1",  # 使用 sensor 字段，与 RuntimeService 期望一致
+                    "sensor": "PE1",
                     "channel": 1,
                     "state": di1,
                     "previous_state": self._last_di1,
@@ -200,7 +201,7 @@ class PhotoelectricClient:
                 event_type=event_type,
                 source="di2_modbus_client",
                 payload={
-                    "sensor": "PE2",  # 使用 sensor 字段，与 RuntimeService 期望一致
+                    "sensor": "PE2",
                     "channel": 2,
                     "state": di2,
                     "previous_state": self._last_di2,
@@ -249,7 +250,7 @@ class PhotoelectricClient:
         if self._health.status != status:
             self._health.status = status
             self._health.message = message
-            self._health.last_heartbeat_ts = datetime.now().timestamp()
+            self._health.last_heartbeat_ms = time.time_ns() / 1_000_000
             self.logger.info(f"Modbus 状态 -> {status.value} {message}")
 
     @property
