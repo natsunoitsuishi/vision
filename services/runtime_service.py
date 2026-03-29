@@ -3,7 +3,7 @@
 运行时服务 - 核心业务编排服务
 """
 import asyncio
-import logging
+from infra import get_logger
 import time
 from typing import Optional, Dict
 from datetime import datetime
@@ -19,6 +19,7 @@ from domain.models import BoxTrack, CameraResult, AppEvent
 from domain.scan_session import ScanSessionController
 from domain.scheduler import TriggerScheduler
 from domain.track_manager import TrackManager
+from infra import get_logger
 from infra.db.repository import SQLiteRepository
 from services import ArchiveService
 from services.event_bus import EventBus
@@ -85,7 +86,7 @@ class RuntimeService:
         self._current_mode = RunMode.LR
 
         # 日志
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
 
         # 统计
         self.stats = {
@@ -215,11 +216,6 @@ class RuntimeService:
                 else:
                     logging.error("error for time !!!")
 
-            # 检查速度是否有效
-            if track.speed_mm_s is None:
-                self.logger.warning(f"[PE2] 轨迹 {track.track_id} 速度为 None，使用默认速度")
-                track.speed_mm_s = get_config("runtime", {}).get("default_line_speed_mm_s", 500.0)
-
             # 打开扫描窗口
             self.trigger_scheduler.open_scan_window(track, track.speed_mm_s, track.pe2_on_ms)
 
@@ -227,7 +223,7 @@ class RuntimeService:
             await self.scan_session_controller.ensure_running()
 
             self.logger.info(f"[PE2] 匹配轨迹: {track.track_id}, "
-                             f"速度={track.speed_mm_s:.10f}mm/s, "
+                             f"速度={track.speed_mm_s:.1f}mm/s, "
                              f"窗口={track.scan_window_start_ms}~{track.scan_window_end_ms}")
 
             # 通知 UI 更新

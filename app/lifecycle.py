@@ -1,5 +1,5 @@
 import asyncio
-import logging
+from infra.logging.setup import get_logger
 import signal
 from enum import Enum
 from typing import Optional, Dict, List
@@ -74,7 +74,7 @@ class AppController:
         self._startup_time = 0.0
 
         # 日志
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
 
         # 配置和基础设施
         #  --- config_manage 全局单例 ---

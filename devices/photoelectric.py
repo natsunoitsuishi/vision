@@ -1,6 +1,5 @@
 # devices/modbus_client.py
 import asyncio
-import logging
 import time
 from datetime import datetime
 from typing import Optional, Tuple
@@ -12,6 +11,7 @@ from config.manager import get_config, load_config
 from domain.enums import DeviceStatus, EventType
 from domain.models import DeviceHealth
 from services.event_bus import EventBus
+from infra.logging.setup import get_logger
 
 """
     ModbusTCP 客户端，用于对接设备模拟程序
@@ -22,7 +22,7 @@ from services.event_bus import EventBus
 """
 class PhotoelectricClient:
     def __init__(self, event_bus: EventBus):
-        self.logger = logging.getLogger("photoelectric.client")
+        self.logger = get_logger("photoelectric.client")
 
         # 连接参数
         self.host = get_config("photoelectric.host", "192.168.1.117")
