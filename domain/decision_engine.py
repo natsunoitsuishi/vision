@@ -70,7 +70,7 @@ class DecisionEngine:
 
         self.logger.info(f"评估轨迹 {track.track_id}: "
                           f"相机结果数={len(track.camera_results)}, "
-                          f"创建时间={track.created_ts:.3f}, ")
+                          f"创建时间={track.created_ms:.3f}, ")
                           # f"窗口结束={track.scan_window_end_ts:.3f if track.scan_window_end_ts else 'None'}")
 
         # 步骤1：检查设备异常
@@ -257,9 +257,9 @@ class DecisionEngine:
 
         # 时序信息
         timing_info = {
-            "created_ts": track.created_ts,  # 创建时间
-            "pe1_on_ts": track.pe1_on_ts,  # PE1触发时间
-            "pe2_on_ts": track.pe2_on_ts,  # PE2触发时间
+            "created_ms": track.created_ms,  # 创建时间
+            "pe1_on_ms": track.pe1_on_ms,  # PE1触发时间
+            "pe2_on_ms": track.pe2_on_ms,  # PE2触发时间
             "scan_window_start_ts": track.scan_window_start_ts,  # 窗口开始
             "scan_window_end_ts": track.scan_window_end_ts,  # 窗口结束
             "first_ok_ts": track.first_ok_ts,  # 首次成功时间

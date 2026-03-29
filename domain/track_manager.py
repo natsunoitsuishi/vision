@@ -374,13 +374,13 @@ class TrackManager:
         self._logger.info("[TrackManager] 所有轨迹已重置")
 
     @staticmethod
-    def _generate_track_id(ts: float) -> str:
+    def _generate_track_id(ms: float) -> str:
         """
         生成唯一轨迹ID
 
         格式: T{时间戳}_{随机数}
         """
-        timestamp = datetime.fromtimestamp(ts).strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.fromtimestamp(int(ms / 1000)).strftime("%Y%m%d%H%M%S")
         short_uuid = str(uuid.uuid4())[:8]
         return f"T{timestamp}_{short_uuid}"
 

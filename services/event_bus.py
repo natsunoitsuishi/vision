@@ -308,7 +308,7 @@ class EventBus:
                 errors.append(f"{handler.__name__}: {str(e)}")
                 self._stats["errors"] += 1
                 logger.error(f"❌ 事件处理失败 [{handler.__name__}]: {e}")
-                logger.debug(traceback.format_exc())
+                logger.info(traceback.format_exc())
 
         # 2. 分发给通配符订阅者
         for handler in self._wildcard_subscribers:
