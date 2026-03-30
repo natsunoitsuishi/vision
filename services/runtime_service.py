@@ -132,6 +132,7 @@ class RuntimeService:
             if not camera.is_scanning:
                 await camera.start_scan_session()
 
+        await self.archive_service.start()
         self.logger.info("RuntimeService 启动完成")
 
     async def stop(self) -> None:
