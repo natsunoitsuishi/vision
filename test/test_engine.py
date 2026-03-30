@@ -68,7 +68,7 @@ class DecisionEngine:
             return DecisionStatus.FAULT
 
         # 获取所有成功的结果
-        successful_results = [r for r in track.camera_results if r.result == "OK"]
+        successful_results = [r for r in track.camera_results if r.result == "TRUE"]
 
         # 情况1：没有任何成功的结果
         if not successful_results:
@@ -111,7 +111,7 @@ class DecisionEngine:
         Returns:
             最终决策状态
         """
-        successful_results = [r for r in track.camera_results if r.result == "OK"]
+        successful_results = [r for r in track.camera_results if r.result == "TRUE"]
 
         if not successful_results:
             return DecisionStatus.NO_READ
@@ -177,7 +177,7 @@ class DecisionEngine:
         status = self.evaluate(track)
 
         reasons = []
-        successful_results = [r for r in track.camera_results if r.result == "OK"]
+        successful_results = [r for r in track.camera_results if r.result == "TRUE"]
 
         if not successful_results:
             reasons.append("所有相机均未读到码")

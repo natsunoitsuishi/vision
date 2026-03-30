@@ -7,10 +7,6 @@ from .models import BoxTrack
 
 logger = logging.getLogger(__name__)
 
-# def _calc_window_time(box_speed_m_ms: float, pe2_on_ms: float) -> Tuple[float, float]:
-#     ms = get_config("pe2_to_camera_dist") / box_speed_m_ms + pe2_on_ms
-#     return ms - get_config("trigger.ttl_ms"), ms + get_config("trigger.ttl_ms")
-
 def _calc_window_time(box_speed_mm_s: float, pe2_on_ms: float) -> Tuple[float, float]:
     """
     计算扫描窗口
@@ -28,7 +24,6 @@ def _calc_window_time(box_speed_mm_s: float, pe2_on_ms: float) -> Tuple[float, f
     travel_time_ms = (pe2_to_camera_dist_mm / box_speed_mm_s) * 1000
     # 窗口中心时间
     window_center_ms = pe2_on_ms + travel_time_ms
-    print(f"window_center_ms: {window_center_ms}, pe2_on_ms: {pe2_on_ms}")
 
     # 窗口容差（毫秒）
     ttl_ms = get_config("trigger.ttl_ms")

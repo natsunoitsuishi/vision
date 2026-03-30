@@ -25,7 +25,7 @@ def resolve_final_code(track: BoxTrack) -> Tuple[Optional[str], Optional[Decisio
         return None, None
 
     # 检查是否已经读到有效码
-    successful_results = [r for r in track.camera_results if r.result == "OK"]
+    successful_results = [r for r in track.camera_results if r.result == "TRUE"]
 
     if not successful_results:
         return None, None

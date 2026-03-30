@@ -329,8 +329,8 @@ class TrackManager:
         track.camera_results.append(camera_result)
 
         # 更新首次成功时间
-        if camera_result.result == "OK" and track.first_ok_ts is None:
-            track.first_ok_ts = camera_result.ts_ms
+        if camera_result.result == "TRUE" and track.first_ok_ms is None:
+            track.first_ok_ms = camera_result.ts_ms
 
         return True
 

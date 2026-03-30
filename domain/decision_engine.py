@@ -59,7 +59,7 @@ class DecisionEngine:
             "fault_count": 0
         }
 
-    def evaluate(self, track: BoxTrack) -> DecisionStatus:
+    def evaluate(self, track_data: BoxTrack) -> DecisionStatus:
         """
         评估轨迹的最终决策状态
 
@@ -70,36 +70,36 @@ class DecisionEngine:
         4. 超时NG：双相机都返回NG -> TIMEOUT/NO_READ
 
         Args:
-            track: 箱子轨迹对象
+            track_data: 箱子轨迹对象
 
         Returns:
             决策状态
         """
 
-        if not track:
+        if not track_data:
             self.logger.error("轨迹为空，无法评估")
             self._update_stats(DecisionStatus.FAULT)
             return DecisionStatus.FAULT
 
-        self.logger.info(f"评估轨迹 {track.track_id}: "
-                          f"相机结果数={len(track.camera_results)}, "
-                          f"创建时间={track.created_ms:.3f}, ")
+        self.logger.info(f"评估轨迹 {track_data.track_id}: "
+                          f"相机结果数={len(track_data.camera_results)}, "
+                          f"创建时间={track_data.created_ms:.3f}, ")
                           # f"窗口结束={track.scan_window_end_ms:.3f if track.scan_window_end_ms else 'None'}")
 
         # 步骤1：检查设备异常
-        if _has_device_fault(track):
-            self.logger.warning(f"轨迹 {track.track_id} 设备异常")
+        if _has_device_fault(track_data):
+            self.logger.warning(f"轨迹 {track_data.track_id} 设备异常")
             self._update_stats(DecisionStatus.FAULT)
             return DecisionStatus.FAULT
 
         # 步骤2：检查是否超时（根据联调用例4：双边超时NG）
-        if self._is_timeout(track):
-            self.logger.warning(f"轨迹 {track.track_id} 超时")
+        if self._is_timeout(track_data):
+            self.logger.warning(f"轨迹 {track_data.track_id} 超时")
             self._update_stats(DecisionStatus.TIMEOUT)
             return DecisionStatus.TIMEOUT
 
         # 步骤3：分析相机结果
-        status = self._analyze_camera_results(track)
+        status = self._analyze_camera_results(track_data)
         self._update_stats(status)
         return status
 
@@ -121,10 +121,10 @@ class DecisionEngine:
 
         for result in track.camera_results:
             # 根据设备模拟程序的result字段判断
-            if result.result == "OK" and result.code:
+            if result.result == "TRUE" and result.code:
                 success_results[result.camera_id] = result
                 self.logger.debug(f"相机{result.camera_id} 成功: {result.code}")
-            elif result.result == "NG":
+            elif result.result == "FALSE":
                 ng_cameras.append(result.camera_id)
                 self.logger.debug(f"相机{result.camera_id} 返回NG")
             else:
@@ -244,14 +244,14 @@ class DecisionEngine:
         failed_cameras = []
         codes = {}
 
-        for result in track.camera_results:
-            if result.result == "OK" and result.code:
-                success_results[result.camera_id] = result
-                codes[result.camera_id] = result.code
-            elif result.result == "NG":
-                ng_cameras.append(result.camera_id)
+        for result_data in track.camera_results:
+            if result_data.result == "TRUE" and result_data.code:
+                success_results[result_data.camera_id] = result_data
+                codes[result_data.camera_id] = result_data.code
+            elif result_data.result == "FALSE":
+                ng_cameras.append(result_data.camera_id)
             else:
-                failed_cameras.append(result.camera_id)
+                failed_cameras.append(result_data.camera_id)
 
         # 生成原因说明
         reason = self._generate_reason(status, success_results, ng_cameras, failed_cameras, track)
@@ -263,7 +263,7 @@ class DecisionEngine:
             "pe2_on_ms": track.pe2_on_ms,  # PE2触发时间
             "scan_window_start_ms": track.scan_window_start_ms,  # 窗口开始
             "scan_window_end_ms": track.scan_window_end_ms,  # 窗口结束
-            "first_ok_ts": track.first_ok_ts,  # 首次成功时间
+            "first_ok_ms": track.first_ok_ms,  # 首次成功时间
             "camera_timestamps": {cam_id: res.ts_ms for cam_id, res in success_results.items()}
         }
 

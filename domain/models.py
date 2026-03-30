@@ -53,7 +53,7 @@ class CameraResult:
     @property
     def is_success(self) -> bool:
         """判断是否扫码成功"""
-        return self.result == "OK" and self.code is not None
+        return self.result == "TRUE" and self.code is not None
 
     @property
     def status(self) -> DecisionStatus:
@@ -149,8 +149,8 @@ class BoxTrack:
     def add_camera_result(self, result: CameraResult):
         """添加相机结果"""
         self.camera_results.append(result)
-        if result.result == "OK" and not self.first_ok_ts:
-            self.first_ok_ts = result.ts_ms
+        if result.result == "TRUE" and not self.first_ok_ms:
+            self.first_ok_ms = result.ts_ms
 
     def finalize(self, code: Optional[str], status: DecisionStatus):
         """完成跟踪"""

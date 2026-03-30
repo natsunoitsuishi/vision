@@ -67,7 +67,6 @@ class BaseCameraClient(ABC):
 
     async def _publish_result(self, result: CameraResult) -> None:
         if not result.symbology == "UNKNOWN":
-            print(f" ts_ms: {result.ts_ms}")
             self.event_bus.emit(
                 event_type=EventType.CAMERA_RESULT,
                 source=f"camera_{self.camera_id}",
@@ -88,17 +87,18 @@ class BaseCameraClient(ABC):
         self._health.last_heartbeat_ms = now_ms
         self._last_heartbeat_ms = now_ms
 
-        self.event_bus.emit(
-            event_type=EventType.DEVICE_FAULT if status != DeviceStatus.ONLINE else EventType.CAMERA_HEARTBEAT,
-            source=f"camera_{self.camera_id}",
-            payload={
-                "device_id": self.camera_id,
-                "device_type": "camera",
-                "status": status.value,
-                "message": message,
-                "timestamp": now_ms
-            }
-        )
+        if status != DeviceStatus.ONLINE:
+            self.event_bus.emit(
+                event_type=EventType.DEVICE_FAULT,
+                source=f"camera_{self.camera_id}",
+                payload={
+                    "device_id": self.camera_id,
+                    "device_type": "camera",
+                    "status": status.value,
+                    "message": message,
+                    "timestamp": now_ms
+                }
+            )
 
 def _parse_to_camera_result(data: dict) -> CameraResult:
     return CameraResult(
