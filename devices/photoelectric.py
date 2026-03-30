@@ -1,5 +1,6 @@
 # devices/modbus_client.py
 import asyncio
+import logging
 import time
 from datetime import datetime
 from typing import Optional, Tuple
@@ -11,7 +12,6 @@ from config.manager import get_config, load_config
 from domain.enums import DeviceStatus, EventType
 from domain.models import DeviceHealth
 from services.event_bus import EventBus
-from infra.logging.setup import get_logger
 
 """
     ModbusTCP 客户端，用于对接设备模拟程序
@@ -22,7 +22,7 @@ from infra.logging.setup import get_logger
 """
 class PhotoelectricClient:
     def __init__(self, event_bus: EventBus):
-        self.logger = get_logger("photoelectric.client")
+        self.logger = logging.getLogger("photoelectric.client")
 
         # 连接参数
         self.host = get_config("photoelectric.host", "192.168.1.117")
@@ -292,7 +292,7 @@ if __name__ == '__main__':
         PORT = get_config("photoelectric.port")
 
         # 建立连接
-        client = ModbusTcpClient(IP, port=PORT)
+        client = ModbusTcpClient(IP, port=501)
         client.connect()
 
         while True:
@@ -307,9 +307,9 @@ if __name__ == '__main__':
                 pe2 = result.bits[1]
 
                 if pe1:
-                    print(f"光电1状态: {pe1}")
+                    print(f"光电1状态: {pe1}, 时间: {time.time_ns() // 1_000_000}")
                 if pe2:
-                    print(f"                   |  光电2状态: {pe2}")
+                    print(f"                   |  光电2状态: {pe2}, 时间: {time.time_ns() // 1_000_000}")
             else:
                 print("读取失败")
 
@@ -317,3 +317,11 @@ if __name__ == '__main__':
         client.close()
 
     asyncio.run(main())
+
+
+# 1774833449018
+# 1774833449128
+# 1774833449037.2163,
+
+# 1774833454573
+# 1774833453320.7595

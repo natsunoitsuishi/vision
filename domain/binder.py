@@ -109,7 +109,7 @@ class ResultBinder:
         Args:
             config: 配置字典，包含时间窗容差等参数
         """
-        self._window_tolerance_ms = get_config("window_tolerance_ms", 50)  # 窗口边界容差（毫秒）
+        self._window_tolerance_ms = get_config("window_tolerance_ms", 500)  # 窗口边界容差（毫秒）
         self._logger = get_logger(__name__)
 
         # 统计信息
@@ -179,13 +179,18 @@ class ResultBinder:
             候选轨迹列表
         """
         candidates = []
-
+        print(active_tracks)
         for track in active_tracks:
             # 检查轨迹是否有有效的时间窗
             if track.scan_window_start_ms is None or track.scan_window_end_ms is None:
                 continue
 
             # 检查时间戳是否在窗口内（带容差）
+            # scan_window_start_ms=1774777458891.1082,
+            #   scan_window_end_ms=1774777458991.1082
+
+            print(f"{result.ts_ms}, {track.scan_window_start_ms}, {track.scan_window_end_ms}")
+
             if self._is_in_window(result.ts_ms, track.scan_window_start_ms, track.scan_window_end_ms):
                 candidates.append(track)
 
@@ -203,7 +208,7 @@ class ResultBinder:
         Returns:
             是否在窗口内
         """
-        tolerance = self._window_tolerance_ms / 1000.0  # 转换为秒
+        tolerance = self._window_tolerance_ms
         return start - tolerance <= ts <= end + tolerance
 
     def get_stats(self) -> dict:

@@ -215,7 +215,7 @@ class TrackManager:
                 expired_tracks.append(track)
                 self._finished_tracks.append(track)
                 self._logger.warning(f"[TrackManager] 轨迹超时: {track.track_id}, "
-                                     f"创建时间={track.created_ms}, 超时={get_config('track.ttl_ms', 1500)}ms")
+                                     f"创建时间={track.created_ms}, 超时={get_config('track.ttl_ms', 150)}ms")
             else:
                 remaining_tracks.append(track)
 

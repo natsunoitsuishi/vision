@@ -116,7 +116,7 @@ class RuntimeService:
         self.event_bus.subscribe(EventType.PE_RISE, self._on_pe_rise)
         self.event_bus.subscribe(EventType.PE_FALL, self._on_pe_fall)
         self.event_bus.subscribe(EventType.CAMERA_RESULT, self._on_camera_result)
-        self.event_bus.subscribe(EventType.CAMERA_HEARTBEAT, self._on_camera_heartbeat)
+        # self.event_bus.subscribe(EventType.CAMERA_HEARTBEAT, self._on_camera_heartbeat)
         self.event_bus.subscribe(EventType.TRACK_TIMEOUT, self._on_track_timeout)
         self.event_bus.subscribe(EventType.DEVICE_FAULT, self._on_device_fault)
 
@@ -208,16 +208,29 @@ class RuntimeService:
 
             # 计算速度
             if track.pe1_on_ms is not None:
-                time_diff = timestamp - track.pe1_on_ms
+                time_diff_ms = timestamp - track.pe1_on_ms
                 sensor_distance = get_config("pe1_to_pe2_dist")
-                if time_diff > 0:
-                    track.speed_mm_s = sensor_distance / time_diff
+                if time_diff_ms > 0:
+                    # 配置中是米，需要转换为毫米
+                    pe1_to_pe2_dist_m = get_config("pe1_to_pe2_dist")
+                    pe1_to_pe2_dist_mm = pe1_to_pe2_dist_m * 1000  # 390 mm
+                    time_diff_sec = time_diff_ms / 1000  # 转换为秒
+                    track.speed_mm_s = pe1_to_pe2_dist_mm / time_diff_sec
+                    self.logger.info(f"[PE2] 速度={track.speed_mm_s:.10f}mm/s")
                 else:
-                    self.logger.error("error for time !!!")
+                    self.logger.error(f"time_diff_ms <= 0")
+                    # track.speed_mm_s = get_config("conveyor.default_speed_mm_s", 800)
+            else:
+                self.logger.error(f"track.pe1_on_ms is None")
+                # track.speed_mm_s = get_config("conveyor.default_speed_mm_s", 800)
 
             # 打开扫描窗口
             self.trigger_scheduler.open_scan_window(track, track.speed_mm_s, track.pe2_on_ms)
-
+            # 1774779341319.7307, pe2_on_ms:
+            # 1774779340715.5332
+            # 1774779345127,
+            # 1774779341269.7307,
+            # 1774779341369.7307
             # 确保扫码会话运行
             await self.scan_session_controller.ensure_running()
 
@@ -250,77 +263,78 @@ class RuntimeService:
             处理相机结果事件
         """
         payload = event.payload
+        if payload.get("result") == "TRUE":
+            self.logger.info(f"[_on_camera_result] 收到事件负载, "
+                             f"camera_id: {event.payload.get('camera_id')} " 
+                             f"result: {event.payload.get('result')} " 
+                             f"code: {event.payload.get('code')} " 
+                             f"symbology: {event.payload.get('symbology')} " 
+                             f"ts_ms: {event.payload.get('ts_ms')} "
+                             )
 
-        self.logger.info(f"[_on_camera_result] 收到事件负载, "
-                         f"camera_id: {event.payload.get('camera_id')}"
-                         f"result: {event.payload.get('result')}"
-                         f"code: {event.payload.get('code')}"
-                         f"symbology: {event.payload.get('symbology')}"
-                         f"ts_ms: {event.payload.get('ts_ms')}"
-                         )
 
-        # 获取活动轨迹
-        active_tracks = self.track_manager.get_active_tracks()
-        if not active_tracks:
-            self.logger.warning(f"[相机{payload.get('camera_id')}] 收到结果但没有活动轨迹")
-            await self._raise_alarm("NO_ACTIVE_TRACK", "收到扫码结果但没有活动轨迹")
-            return
+            # 获取活动轨迹
+            active_tracks = self.track_manager.get_active_tracks()
+            if not active_tracks:
+                self.logger.warning(f"[相机{payload.get('camera_id')}] 收到结果但没有活动轨迹")
+                await self._raise_alarm("NO_ACTIVE_TRACK", "收到扫码结果但没有活动轨迹")
+                return
+            # 构建 CameraResult 对象
+            camera_result = CameraResult(
+                camera_id=payload.get("camera_id"),
+                code=payload.get("code"),
+                ts_ms=payload.get("ts_ms"),
+                result="TRUE" if payload.get("result") == "TRUE" else "FALSE",
+                symbology=payload.get("symbology"),
+                raw_payload=payload,
+            )
 
-        print(f"len of active_tracks: {len(active_tracks)}")
-        # 构建 CameraResult 对象
-        camera_result = CameraResult(
-            camera_id=payload.get("camera_id"),
-            code=payload.get("code"),
-            ts_ms=payload.get("ts_ms", 0),
-            result="TRUE" if payload.get("result") == "TRUE" else "FALSE",
-            symbology=payload.get("symbology"),
-            raw_payload=payload,
-        )
+            # 绑定结果到轨迹
+            track = self.result_binder.bind(camera_result, active_tracks)
 
-        # 绑定结果到轨迹
-        track = self.result_binder.bind(camera_result, active_tracks)
+            if track is None:
+                self.logger.error(f"[相机{payload.get('camera_id')}] 结果无法绑定到任何轨迹")
+                await self._raise_alarm("UNBOUND_RESULT", f"扫码结果无法绑定: {camera_result.code}")
+                return
 
-        if track is None:
-            self.logger.error(f"[相机{payload.get('camera_id')}] 结果无法绑定到任何轨迹")
-            await self._raise_alarm("UNBOUND_RESULT", f"扫码结果无法绑定: {camera_result.code}")
-            return
+            # 添加结果到轨迹
+            self.track_manager.add_camera_result(track.track_id, camera_result)
 
-        # 添加结果到轨迹
-        self.track_manager.add_camera_result(track.track_id, camera_result)
+            # 保存相机结果到数据库
+            await self.repository.save_camera_result({
+                "track_id": track.track_id,
+                "camera_id": payload.get("camera_id"),
+                "result": "OK" if camera_result.result == "TRUE" else "FALSE",
+                "code": camera_result.code,
+                "symbology": camera_result.symbology,
+                "ts_ms": camera_result.ts_ms
+            })
 
-        # 保存相机结果到数据库
-        await self.repository.save_camera_result({
-            "track_id": track.track_id,
-            "camera_id": payload.get("camera_id"),
-            "result": "OK" if camera_result.result == "TRUE" else "FALSE",
-            "code": camera_result.code,
-            "symbology": camera_result.symbology,
-            "ts_ms": camera_result.ts_ms
-        })
+            self.logger.info(f"[相机{payload.get('camera_id')}] 结果绑定到轨迹 {track.track_id}: "
+                             f"code={camera_result.code}, success={camera_result.result == 'OK'}")
 
-        self.logger.info(f"[相机{payload.get('camera_id')}] 结果绑定到轨迹 {track.track_id}: "
-                         f"code={camera_result.code}, success={camera_result.result == 'OK'}")
+            track = self.track_manager.get_track_by_id(track.track_id)
 
-        track = self.track_manager.get_track_by_id(track.track_id)
+            if len(track.camera_results) >= 2:
+                # 调用决策引擎判定
 
-        if len(track.camera_results) >= 2:
-            # 调用决策引擎判定
+                track.final_status = self.decision_engine.evaluate(track)
 
-            track.final_status = self.decision_engine.evaluate(track)
+                # 设置最终码值
+                successful = [r for r in track.camera_results if r.result == "TRUE"]
+                track.final_code = successful[0].code if successful else None
 
-            # 设置最终码值
-            successful = [r for r in track.camera_results if r.result == "TRUE"]
-            track.final_code = successful[0].code if successful else None
+                self.logger.info(f"[相机{payload.get('camera_id')}] 轨迹 {track.track_id} 判定完成: {track.final_status.value}")
 
-            self.logger.info(f"[相机{payload.get('camera_id')}] 轨迹 {track.track_id} 判定完成: {track.final_status.value}")
+                # 输出结果
+                await self._output_result(track)
 
-            # 输出结果
-            await self._output_result(track)
+            else:
+                self.logger.info(
+                    f"[相机{payload.get('camera_id')}] 轨迹 {track.track_id} 已收到 {len(track.camera_results)}/2 个结果，继续等待")
 
         else:
-            self.logger.info(
-                f"[相机{payload.get('camera_id')}] 轨迹 {track.track_id} 已收到 {len(track.camera_results)}/2 个结果，继续等待")
-
+            self.logger.info(f"get UNKNOWN")
     async def _on_camera_heartbeat(self, event: AppEvent) -> None:
         """处理相机心跳事件"""
         camera_id = event.payload.get("camera_id")
@@ -381,7 +395,7 @@ class RuntimeService:
                 "mode": track.mode.value,
                 "final_code": track.final_code,
                 "status": track.final_status.value,
-                "created_at": datetime.fromtimestamp(track.created_ms).isoformat()
+                "created_at": datetime.fromtimestamp(track.created_ms / 1_000).isoformat()
             }
             asyncio.create_task(self.scheduler_client.report_result(report_payload))
 
@@ -392,7 +406,7 @@ class RuntimeService:
                 "mode": track.mode.value,
                 "final_code": track.final_code,
                 "status": track.final_status.value,
-                "created_at": datetime.fromtimestamp(track.created_ms).isoformat(),
+                "created_at": datetime.fromtimestamp(track.created_ms / 1_000).isoformat(),
                 "start_time": track.created_ms,
                 "end_time": time.time()
             }

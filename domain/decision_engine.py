@@ -1,11 +1,24 @@
 # domain/decision_engine.py
-import logging
 import time
 from typing import Dict, List
 
 from config.manager import get_config
 from domain.enums import DecisionStatus
 from domain.models import BoxTrack, CameraResult
+from infra import get_logger
+
+
+def _has_device_fault(track_data: BoxTrack) -> bool:
+    """检查是否有设备异常"""
+    # 检查相机结果中是否有设备异常标记
+    for result_data in track_data.camera_results:
+        if hasattr(result_data, 'error_msg') and result_data.error_msg and "设备异常" in result_data.error_msg:
+            return True
+
+    # 检查是否缺少相机连接
+    # 这里可以根据实际情况添加更多检测
+
+    return False
 
 
 class DecisionEngine:
@@ -29,7 +42,7 @@ class DecisionEngine:
 
     def __init__(self, config: dict = get_config()):
         self.config = config or {}
-        self.logger = logging.getLogger("decision_engine")
+        self.logger = get_logger(__name__)
 
         # 配置参数（根据联调操作手册建议）
         self.timeout_threshold = config.get("timeout_threshold", 5.0)  # 超时阈值（秒）
@@ -71,10 +84,10 @@ class DecisionEngine:
         self.logger.info(f"评估轨迹 {track.track_id}: "
                           f"相机结果数={len(track.camera_results)}, "
                           f"创建时间={track.created_ms:.3f}, ")
-                          # f"窗口结束={track.scan_window_end_ts:.3f if track.scan_window_end_ts else 'None'}")
+                          # f"窗口结束={track.scan_window_end_ms:.3f if track.scan_window_end_ms else 'None'}")
 
         # 步骤1：检查设备异常
-        if self._has_device_fault(track):
+        if _has_device_fault(track):
             self.logger.warning(f"轨迹 {track.track_id} 设备异常")
             self._update_stats(DecisionStatus.FAULT)
             return DecisionStatus.FAULT
@@ -181,25 +194,13 @@ class DecisionEngine:
             return False
 
         # 检查是否超过扫描窗口
-        if track.scan_window_end_ts:
+        if track.scan_window_end_ms:
             current_time = time.time()
-            elapsed = current_time - track.scan_window_end_ts
+            elapsed = current_time - track.scan_window_end_ms
 
             if elapsed > self.timeout_threshold:
                 self.logger.debug(f"轨迹 {track.track_id} 超时: 已过{elapsed:.2f}秒 > {self.timeout_threshold}秒")
                 return True
-
-        return False
-
-    def _has_device_fault(self, track: BoxTrack) -> bool:
-        """检查是否有设备异常"""
-        # 检查相机结果中是否有设备异常标记
-        for result in track.camera_results:
-            if hasattr(result, 'error_msg') and result.error_msg and "设备异常" in result.error_msg:
-                return True
-
-        # 检查是否缺少相机连接
-        # 这里可以根据实际情况添加更多检测
 
         return False
 
@@ -260,8 +261,8 @@ class DecisionEngine:
             "created_ms": track.created_ms,  # 创建时间
             "pe1_on_ms": track.pe1_on_ms,  # PE1触发时间
             "pe2_on_ms": track.pe2_on_ms,  # PE2触发时间
-            "scan_window_start_ts": track.scan_window_start_ts,  # 窗口开始
-            "scan_window_end_ts": track.scan_window_end_ts,  # 窗口结束
+            "scan_window_start_ms": track.scan_window_start_ms,  # 窗口开始
+            "scan_window_end_ms": track.scan_window_end_ms,  # 窗口结束
             "first_ok_ts": track.first_ok_ts,  # 首次成功时间
             "camera_timestamps": {cam_id: res.ts_ms for cam_id, res in success_results.items()}
         }
@@ -298,7 +299,7 @@ class DecisionEngine:
 
         elif status == DecisionStatus.TIMEOUT:
             if ng_cameras:
-                return f"超时: 相机{ng_cameras}返回NG (扫描窗口结束时间: {track.scan_window_end_ts})"
+                return f"超时: 相机{ng_cameras}返回NG (扫描窗口结束时间: {track.scan_window_end_ms})"
             else:
                 return f"超时: 扫描窗口内无结果 (阈值: {self.timeout_threshold}秒)"
 

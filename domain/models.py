@@ -45,7 +45,7 @@ class CameraResult:
     symbology: str
 
     # 仿真时间戳，单位毫秒
-    ts_ms: int
+    ts_ms: float
 
     # 可选：payload 负载, 原始报文，用于调试
     raw_payload: Optional[dict] = None

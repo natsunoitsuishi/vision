@@ -7,9 +7,34 @@ from .models import BoxTrack
 
 logger = logging.getLogger(__name__)
 
-def _calc_window_time(box_speed_m_ms: float, pe2_on_ms: float) -> Tuple[float, float]:
-    ms = get_config("pe2_to_camera_dist") / box_speed_m_ms + pe2_on_ms
-    return ms - get_config("trigger.ttl_ms"), ms + get_config("trigger.ttl_ms")
+# def _calc_window_time(box_speed_m_ms: float, pe2_on_ms: float) -> Tuple[float, float]:
+#     ms = get_config("pe2_to_camera_dist") / box_speed_m_ms + pe2_on_ms
+#     return ms - get_config("trigger.ttl_ms"), ms + get_config("trigger.ttl_ms")
+
+def _calc_window_time(box_speed_mm_s: float, pe2_on_ms: float) -> Tuple[float, float]:
+    """
+    计算扫描窗口
+
+    Args:
+        box_speed_mm_s: 速度 (mm/s)
+        pe2_on_ms: PE2触发时间 (毫秒)
+    """
+    # 获取配置（米转毫米）
+    pe2_to_camera_dist_m = get_config("pe2_to_camera_dist", 0.36)
+    pe2_to_camera_dist_mm = pe2_to_camera_dist_m * 1000  # 360 mm
+
+    # 计算从 PE2 到相机的旅行时间（毫秒）
+    # 时间 = 距离 / 速度
+    travel_time_ms = (pe2_to_camera_dist_mm / box_speed_mm_s) * 1000
+    # 窗口中心时间
+    window_center_ms = pe2_on_ms + travel_time_ms
+    print(f"window_center_ms: {window_center_ms}, pe2_on_ms: {pe2_on_ms}")
+
+    # 窗口容差（毫秒）
+    ttl_ms = get_config("trigger.ttl_ms")
+
+    return window_center_ms - ttl_ms, window_center_ms + ttl_ms
+
 
 class TriggerScheduler:
     """

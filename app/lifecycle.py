@@ -267,56 +267,52 @@ class AppController:
 
         关闭顺序与启动顺序相反
         """
-        # if self.state == AppState.STOPPING:
-        #     return
-        #
-        # self.state = AppState.STOPPING
-        # self.logger.info("Shutting down application...")
-        #
-        # # 1. 停止运行时服务（停止接收新事件）
-        # if self.runtime_service:
-        #     await self.runtime_service.stop()
-        #     self.logger.info("Runtime service stopped")
-        #
-        # # 2. 停止后台服务
-        # for task in self._background_tasks:
-        #     task.cancel()
-        #
-        # # 等待后台任务完成
-        # if self._background_tasks:
-        #     await asyncio.gather(*self._background_tasks, return_exceptions=True)
-        #     self.logger.info("Background services stopped")
-        #
-        # # 3. 关闭对外接口
-        # if self.scheduler_client:
-        #     await self.scheduler_client.disconnect()
-        # self.logger.info("External clients disconnected")
-        #
-        # # 4. 停止设备驱动
-        # if self.dio_service:
-        #     await self.dio_service.stop()
-        #
-        # for camera in self.cameras.values():
-        #     await camera.disconnect()
-        # self.logger.info("Devices stopped")
-        #
-        # # 5. 关闭数据库连接
-        # if self.repository:
-        #     await self.repository.close()
-        #
-        # # 6. 关闭日志
-        # logging.shutdown()
-        #
-        # # 7. 关闭 UI
-        # if self.main_window:
-        #     self.main_window.close()
-        #
-        # # 8. 退出事件循环
-        # self._shutdown_event.set()
-        # self.logger.info("Application shutdown completed")
-        #
-        # # 退出 Qt 应用
-        # self.qt_app.quit()
+        if self.state == AppState.STOPPING:
+            return
+
+        self.state = AppState.STOPPING
+        self.logger.info("Shutting down application...")
+
+        # 1. 停止运行时服务（停止接收新事件）
+        if self.runtime_service:
+            await self.runtime_service.stop()
+            self.logger.info("Runtime service stopped")
+
+        # 2. 停止后台服务
+        for task in self._background_tasks:
+            task.cancel()
+
+        # 等待后台任务完成
+        if self._background_tasks:
+            await asyncio.gather(*self._background_tasks, return_exceptions=True)
+            self.logger.info("Background services stopped")
+
+        # 3. 关闭对外接口
+        if self.scheduler_client:
+            await self.scheduler_client.disconnect()
+        self.logger.info("External clients disconnected")
+
+        for camera in self.cameras.values():
+            await camera.disconnect()
+        self.logger.info("Devices stopped")
+
+        # 5. 关闭数据库连接
+        if self.repository:
+            await self.repository.close()
+
+        # 6. 关闭日志
+        self.logger.shutdown()
+
+        # 7. 关闭 UI
+        if self.main_window:
+            self.main_window.close()
+
+        # 8. 退出事件循环
+        self._shutdown_event.set()
+        self.logger.info("Application shutdown completed")
+
+        # 退出 Qt 应用
+        self.qt_app.quit()
 
     async def restart_runtime(self) -> None:
         """
