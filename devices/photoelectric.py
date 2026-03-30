@@ -307,7 +307,7 @@ if __name__ == '__main__':
                 pe2 = result.bits[1]
 
                 if pe1:
-                    print(f"光电1状态: {pe1}, 时间: {time.time_ns() // 1_000_000}")
+                    print(f"光电1状态: {pe1}                      , 时间: {time.time_ns() // 1_000_000}")
                 if pe2:
                     print(f"                   |  光电2状态: {pe2}, 时间: {time.time_ns() // 1_000_000}")
             else:

@@ -213,7 +213,7 @@ if __name__ == "__main__":
     import json
 
     def main():
-        CAMERA_IP = "192.168.1.79"
+        camera_ip = "192.168.1.79"
         PORT_TRIGGER = 1025  # 触发端口
         PORT_READ = 1024  # 读码端口
         TRIGGER_CMD = b"start"
@@ -227,7 +227,7 @@ if __name__ == "__main__":
         # 1. 先发送一次触发指令
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((CAMERA_IP, PORT_TRIGGER))
+                s.connect((camera_ip, PORT_TRIGGER))
                 s.sendall(TRIGGER_CMD)
                 print("✅ 已发送拍照触发指令")
         except Exception as e:
@@ -242,7 +242,7 @@ if __name__ == "__main__":
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s_read:
                 s_read.settimeout(5)
-                s_read.connect((CAMERA_IP, PORT_READ))
+                s_read.connect((camera_ip, PORT_READ))
                 print(f"✅ 已连接读码端口 {PORT_READ}，持续监听中...\n")
 
                 while True:
@@ -259,7 +259,6 @@ if __name__ == "__main__":
 
                         # 解析
                         data = json.loads(buffer.decode().strip())
-                        print(f"data: {data}")
                         code = data.get("code", "").strip()
                         if not code or code == "NG":
                             continue
@@ -274,8 +273,6 @@ if __name__ == "__main__":
                             if int(code) < int(pre_code):
                                 # 写入前清理：去掉最后一个（新开始的字符）
                                 save_str = my_str[:-1]
-# 2017-08-04 18:55:21.087
-                                # 只保存有效内容
                                 if save_str:
                                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                                     log_line = f"{timestamp}    {save_str}\n"

@@ -141,7 +141,7 @@ class ResultBinder:
         candidates = self._find_candidate_tracks(result, active_tracks)
 
         if not candidates:
-            self._logger.debug(f"相机结果未命中任何时间窗: camera={result.camera_id}, "
+            self._logger.info(f"相机结果未命中任何时间窗: camera={result.camera_id}, "
                                f"ts={result.ts_ms:.3f}")
             self._stats["unbound"] += 1
             return None
@@ -162,8 +162,8 @@ class ResultBinder:
         else:
             self._stats["multi_hit"] += 1
 
-        self._logger.debug(f"结果绑定成功: track={best_track.track_id}, "
-                           f"camera={result.camera_id}, ts={result.ts_ms:.3f}")
+        self._logger.info(f"结果绑定成功: track={best_track.track_id}, "
+                           f"camera={result.camera_id}, ts={result.ts_ms:.10f}")
 
         return best_track
 
@@ -179,17 +179,12 @@ class ResultBinder:
             候选轨迹列表
         """
         candidates = []
-        print(active_tracks)
         for track in active_tracks:
             # 检查轨迹是否有有效的时间窗
             if track.scan_window_start_ms is None or track.scan_window_end_ms is None:
                 continue
 
             # 检查时间戳是否在窗口内（带容差）
-            # scan_window_start_ms=1774777458891.1082,
-            #   scan_window_end_ms=1774777458991.1082
-
-            print(f"{result.ts_ms}, {track.scan_window_start_ms}, {track.scan_window_end_ms}")
 
             if self._is_in_window(result.ts_ms, track.scan_window_start_ms, track.scan_window_end_ms):
                 candidates.append(track)

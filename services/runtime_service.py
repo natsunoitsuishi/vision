@@ -226,11 +226,6 @@ class RuntimeService:
 
             # 打开扫描窗口
             self.trigger_scheduler.open_scan_window(track, track.speed_mm_s, track.pe2_on_ms)
-            # 1774779341319.7307, pe2_on_ms:
-            # 1774779340715.5332
-            # 1774779345127,
-            # 1774779341269.7307,
-            # 1774779341369.7307
             # 确保扫码会话运行
             await self.scan_session_controller.ensure_running()
 

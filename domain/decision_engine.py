@@ -84,7 +84,6 @@ class DecisionEngine:
         self.logger.info(f"评估轨迹 {track_data.track_id}: "
                           f"相机结果数={len(track_data.camera_results)}, "
                           f"创建时间={track_data.created_ms:.3f}, ")
-                          # f"窗口结束={track.scan_window_end_ms:.3f if track.scan_window_end_ms else 'None'}")
 
         # 步骤1：检查设备异常
         if _has_device_fault(track_data):
@@ -338,81 +337,3 @@ class DecisionEngine:
             "no_read_count": 0,
             "fault_count": 0
         }
-
-
-# 测试代码
-if __name__ == "__main__":
-    import logging
-
-    logging.basicConfig(level=logging.INFO)
-
-    from domain.models import CameraResult, BoxTrack
-
-
-    # 创建测试数据
-    def create_test_track(track_id: str, results: List[CameraResult]):
-        track = BoxTrack(track_id=track_id)
-        track.start_ts = time.time()
-        track.end_ts = time.time() + 0.5
-        for result in results:
-            track.add_camera_result(result)
-        return track
-
-
-    # 测试用例1：单鞋盒正常
-    print("\n=== 测试用例1：单鞋盒正常 ===")
-    track1 = create_test_track("test_001", [
-        CameraResult(camera_id=1, result="OK", code="QR-001", symbology="QR", ts_ms=230),
-        CameraResult(camera_id=2, result="OK", code="QR-001", symbology="QR", ts_ms=250)
-    ])
-    engine = DecisionEngine()
-    result = engine.evaluate_with_detail(track1)
-    print(f"结果: {result['status']}")
-    print(f"原因: {result['reason']}")
-
-    # 测试用例2：双边异码
-    print("\n=== 测试用例2：双边异码 ===")
-    track2 = create_test_track("test_002", [
-        CameraResult(camera_id=1, result="OK", code="QR-LEFT-001", symbology="QR", ts_ms=230),
-        CameraResult(camera_id=2, result="OK", code="QR-RIGHT-999", symbology="QR", ts_ms=250)
-    ])
-    result = engine.evaluate_with_detail(track2)
-    print(f"结果: {result['status']}")
-    print(f"原因: {result['reason']}")
-
-    # 测试用例3：超时NG
-    print("\n=== 测试用例3：超时NG ===")
-    track3 = create_test_track("test_003", [
-        CameraResult(camera_id=1, result="NG", code=None, symbology=None, ts_ms=230),
-        CameraResult(camera_id=2, result="NG", code=None, symbology=None, ts_ms=250)
-    ])
-    result = engine.evaluate_with_detail(track3)
-    print(f"结果: {result['status']}")
-    print(f"原因: {result['reason']}")
-
-    # 测试用例4：单相机成功
-    print("\n=== 测试用例4：单相机成功 ===")
-    track4 = create_test_track("test_004", [
-        CameraResult(camera_id=1, result="OK", code="QR-001", symbology="QR", ts_ms=230),
-        CameraResult(camera_id=2, result="NG", code=None, symbology=None, ts_ms=250)
-    ])
-    result = engine.evaluate_with_detail(track4)
-    print(f"结果: {result['status']}")
-    print(f"原因: {result['reason']}")
-
-    # 测试用例5：连续来料正常（3个鞋盒）
-    print("\n=== 测试用例5：连续来料正常 ===")
-    for i in range(1, 4):
-        track = create_test_track(f"box_{i:03d}", [
-            CameraResult(camera_id=1, result="OK", code=f"QR-{i:03d}", symbology="QR", ts_ms=230 + i * 100),
-            CameraResult(camera_id=2, result="OK", code=f"QR-{i:03d}", symbology="QR", ts_ms=250 + i * 100)
-        ])
-        result = engine.evaluate_with_detail(track)
-        print(f"  {track.track_id}: {result['status']} - {result['reason']}")
-
-    # 打印统计信息
-    print(f"\n=== 统计信息 ===")
-    print(engine.get_statistics())
-
-
-
