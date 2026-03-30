@@ -250,7 +250,7 @@ class RuntimeService:
         PE1 下降沿：准备关闭窗口
         """
         sensor = event.payload.get("sensor")
-        ts = event.payload.get("ts", time.time())
+        ts = event.payload.get("ts", time.time_ns() / 1_000_000)
 
         if sensor == "PE1":
             track = self.track_manager.match_last_open_track()
