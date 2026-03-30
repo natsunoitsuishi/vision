@@ -194,6 +194,7 @@ class AppController:
 
             # 位置推算服务
             self.archive_service = ArchiveService()
+            await self.archive_service.start()
 
             # 5. 运行时服务层 - 整合所有模块，启动核心业务循环
             self.state = AppState.INIT_RUNTIME

@@ -4,12 +4,13 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 
 from config import get_config
+from domain import BoxTrack
 from infra import get_logger
 
 
 @dataclass
 class BoxPosition:
-    track_id: str
+    track: BoxTrack
     current_pos: float = 0.0  # 当前位置 mm
     speed: float = 500.0  # 传送带速度 mm/s
     last_update: float = 0.0
@@ -23,7 +24,7 @@ class ArchiveService:
         self.PE2_POS = self.PE1_POS + get_config("pe1_to_pe2_dist")
         self.MAX_POS = 1500.0  # 最大位置（超出即离开）
 
-        self.active_boxes: Dict[str, BoxPosition] = {}
+        self.active_boxes: Dict[BoxTrack, BoxPosition] = {}
         self._running = False
         self.logger = get_logger(__name__)
 
@@ -60,31 +61,31 @@ class ArchiveService:
             await asyncio.sleep(0.05)  # 50ms 更新一次
 
     # ==================== 外部事件触发（光电/相机） ====================
-    def handle_on_pe1(self, track_id: str):
+    def handle_on_pe1(self, track: BoxTrack):
         """鞋盒触发入口光电 → 创建新轨迹"""
         now = time.time_ns() / 1_000_000
         box = BoxPosition(
-            track_id=track_id,
+            track=track,
             current_pos=self.PE1_POS,
             last_update=now
         )
-        self.active_boxes[track_id] = box
+        self.active_boxes[track] = box
 
-    def handle_on_pe2(self, track_id: str, box_speed: float):
+    def handle_on_pe2(self, track: BoxTrack):
         """触发出口光电 → 强制校准位置"""
-        box = self.active_boxes.get(track_id)
+        box = self.active_boxes.get(track)
         if box:
             box.current_pos = self.PE2_POS
             box.last_update = time.time_ns() / 1_000_000
-            box.speed = box_speed
+            box.speed = track.speed_mm_s
 
     # ==================== 查询接口 ====================
-    def get_position(self, track_id: str) -> Optional[dict]:
-        box = self.active_boxes.get(track_id)
+    def get_position(self, track: BoxTrack) -> Optional[dict]:
+        box = self.active_boxes.get(track)
         if not box:
             return None
         return {
-            "track_id": box.track_id,
+            "track": box.track,
             "current_pos_mm": round(box.current_pos, 1),
             "speed_mm_s": box.speed,
             "has_exited": box.has_exited
