@@ -55,7 +55,7 @@ class TriggerScheduler:
 
         logger.info(f"打开扫描窗口: track={track.track_id}, "
                     f"start={window_start:.3f}, end={window_end:.3f}, "
-                    f"duration={(window_end - window_start) * 1000:.1f}ms")
+                    f"duration={window_end - window_start:.1f}ms")
         return track
 
 

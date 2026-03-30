@@ -98,6 +98,9 @@ class RuntimeService:
             "fault_count": 0
         }
 
+        self._processed_results = set()
+        self._processed_time = time.time_ns() / 1_000_000
+
 
     # =============================
     # 生命周期管理
@@ -116,7 +119,7 @@ class RuntimeService:
         self.event_bus.subscribe(EventType.PE_RISE, self._on_pe_rise)
         self.event_bus.subscribe(EventType.PE_FALL, self._on_pe_fall)
         self.event_bus.subscribe(EventType.CAMERA_RESULT, self._on_camera_result)
-        # self.event_bus.subscribe(EventType.CAMERA_HEARTBEAT, self._on_camera_heartbeat)
+        self.event_bus.subscribe(EventType.CAMERA_HEARTBEAT, self._on_camera_heartbeat)
         self.event_bus.subscribe(EventType.TRACK_TIMEOUT, self._on_track_timeout)
         self.event_bus.subscribe(EventType.DEVICE_FAULT, self._on_device_fault)
 
@@ -271,6 +274,17 @@ class RuntimeService:
                              f"ts_ms: {event.payload.get('ts_ms')} "
                              )
 
+            result_key = f"{payload.get('code')}_{payload.get('camera_id')}"
+
+            if result_key in self._processed_results and event.payload.get("ts_ms") - self._processed_time <= 300:
+                self.logger.info(f"重复结果，忽略: {result_key}")
+                return
+            self._processed_results.add(result_key)
+            self._processed_time = event.payload.get("ts_ms")
+
+            # 限制缓存大小
+            if len(self._processed_results) > 100:
+                self._processed_results.clear()
 
             # 获取活动轨迹
             active_tracks = self.track_manager.get_active_tracks()
@@ -314,7 +328,7 @@ class RuntimeService:
 
             track = self.track_manager.get_track_by_id(track.track_id)
 
-            if len(track.camera_results) >= 2:
+            if len(track.camera_results) >= 1:
                 # 调用决策引擎判定
 
                 track.final_status = self.decision_engine.evaluate(track)
@@ -330,7 +344,7 @@ class RuntimeService:
 
             else:
                 self.logger.info(
-                    f"[相机{payload.get('camera_id')}] 轨迹 {track.track_id} 已收到 {len(track.camera_results)}/2 个结果，继续等待")
+                    f"[相机{payload.get('camera_id')}] 轨迹 {track.track_id} 未收到结果，继续等待")
 
         else:
             self.logger.info(f"get UNKNOWN")

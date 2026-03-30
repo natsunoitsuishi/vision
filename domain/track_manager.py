@@ -168,6 +168,11 @@ class TrackManager:
         Returns:
             最终化的轨迹对象
         """
+
+        print(f"[TrackManager] 进入函数 轨迹最终化: {track_id}, 状态={status.value}, "
+                          f"剩余活动轨迹={len(self._active_tracks)}")
+
+
         track = self.get_track_by_id(track_id)
         if track is None:
             self._logger.warning(f"[TrackManager] 最终化失败，轨迹不存在: {track_id}")
@@ -283,8 +288,6 @@ class TrackManager:
         track.scan_window_end_ts = window_end_ts
         track.status = TrackStatus.WINDOW_OPEN
 
-        print(f"[TrackManager] 打开扫描窗口: {track_id}, "
-                           f"窗口={window_start_ts}~{window_end_ts}")
         self._logger.warning(f"[TrackManager] 打开扫描窗口: {track_id}, "
                            f"窗口={window_start_ts}~{window_end_ts}")
         return True

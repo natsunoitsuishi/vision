@@ -28,7 +28,7 @@ class ScanSessionController:
     def __init__(
             self,
             cameras: Dict[str, OptCameraClient],
-            idle_off_delay_ms: int = 150,
+            idle_off_delay_ms: int = 10_000,
             track_manager=None  # 可选，用于获取活动轨迹数量
     ):
         """
