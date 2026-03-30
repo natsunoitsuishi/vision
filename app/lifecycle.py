@@ -19,7 +19,7 @@ from domain.scheduler import TriggerScheduler
 from domain.track_manager import TrackManager
 from infra.db.repository import SQLiteRepository
 from infra.logging.setup import setup_logging, get_logger
-from services import ArchiveService, SystemLayout
+from services import ArchiveService
 from services.event_bus import EventBus
 from services.runtime_service import RuntimeService
 
@@ -193,16 +193,7 @@ class AppController:
             self.logger.info("MES 客户端已启动")
 
             # 位置推算服务
-            self.archive_service = ArchiveService(
-                layout=SystemLayout(
-                    pe1_position_mm=0,
-                    pe2_position_mm=1200,
-                    camera1_position_mm=400,
-                    camera2_position_mm=800,
-                    conveyor_length_mm=1500,
-                    default_speed_mm_s=get_config("conveyor.default_speed_mm_s", 500)
-                )
-            )
+            self.archive_service = ArchiveService()
 
             # 5. 运行时服务层 - 整合所有模块，启动核心业务循环
             self.state = AppState.INIT_RUNTIME

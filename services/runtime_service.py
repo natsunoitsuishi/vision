@@ -194,6 +194,7 @@ class RuntimeService:
             self.logger.info(f"[PE1] 创建轨迹: {track.track_id}, "
                              f"活动轨迹数={self.track_manager.active_count}")
 
+            self.archive_service.handle_on_pe1(track.track_id)
             # 通知 UI 更新
             await self._notify_ui_track_created(track)
 
@@ -217,6 +218,8 @@ class RuntimeService:
                     time_diff_sec = time_diff_ms / 1000  # 转换为秒
                     track.speed_mm_s = pe1_to_pe2_dist_mm / time_diff_sec
                     self.logger.info(f"[PE2] 速度={track.speed_mm_s:.10f}mm/s")
+
+                    self.archive_service.handle_on_pe2(track.track_id, track.speed_mm_s)
                 else:
                     self.logger.error(f"time_diff_ms <= 0")
                     # track.speed_mm_s = get_config("conveyor.default_speed_mm_s", 800)

@@ -3,7 +3,7 @@
 
 包含运行时服务、事件总线、健康检查等核心服务
 """
-from .archive_service import ArchiveService, BoxPosition, SystemLayout, PositionSource
+from .archive_service import ArchiveService, BoxPosition
 from .event_bus import EventBus, create_event_bus, event_listener
 from .health_service import HealthService
 
@@ -30,8 +30,6 @@ __all__ = [
     # 位置推算
     "ArchiveService",
     "BoxPosition",
-    "SystemLayout",
-    "PositionSource",
 ]
 
 __version__ = "1.0.0"
