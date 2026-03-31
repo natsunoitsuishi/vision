@@ -11,7 +11,7 @@ from app.lifecycle import AppController
 # 添加项目根目录到 Python 路径
 # sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from PySide6.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication
 from qasync import QEventLoop
 from infra import get_logger
 

@@ -4,7 +4,7 @@ import signal
 from enum import Enum
 from typing import Optional, Dict, List
 
-from PySide6.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication
 from qasync import QEventLoop
 
 from config import get_config

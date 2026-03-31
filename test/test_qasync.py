@@ -3,7 +3,7 @@ import sys
 
 def test_qasync():
     import asyncio
-    from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
+    from PySide2.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
     from qasync import QEventLoop
 
     async def background_task(button):

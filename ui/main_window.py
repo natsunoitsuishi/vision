@@ -10,9 +10,9 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from enum import Enum
 
-from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QFont, QColor
-from PySide6.QtWidgets import (
+from PySide2.QtCore import Qt, QTimer, Signal
+from PySide2.QtGui import QFont, QColor
+from PySide2.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTableWidget, QTableWidgetItem, QFrame,
     QScrollArea, QMessageBox, QSplitter, QProgressBar
