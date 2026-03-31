@@ -214,13 +214,11 @@ class ArchiveService:
         self._running = True
         self.logger.info("BoxTracker 启动")
 
-        loop = asyncio.get_running_loop()
-
         # 启动位置推算循环
-        self._position_task = loop.create_task(self._position_loop())
+        self._position_task = asyncio.create_task(self._position_loop())
 
         # 启动摆轮机触发监控循环
-        self._divert_monitor_task = loop.create_task(self._divert_monitor_loop())
+        self._divert_monitor_task = asyncio.create_task(self._divert_monitor_loop())
 
         # 建立 TCP 连接
         await self._connect_tcp()

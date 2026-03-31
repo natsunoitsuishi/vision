@@ -280,40 +280,139 @@ class PhotoelectricClient:
     #         self.logger.error(f"写入线圈失败: address={address}, value={value}, error={e}")
     #         raise
 
+# if __name__ == '__main__':
+#     from pymodbus.client import ModbusTcpClient
+#     import time
+#     # 模块默认IP和端口
+#     async def main():
+#         await load_config()
+#
+#         IP = get_config("photoelectric.host", "192.168.1.117")
+#
+#         PORT = get_config("photoelectric.port")
+#
+#         # 建立连接
+#         client = ModbusTcpClient(IP, port=502)
+#         client.connect()
+#
+#         while True:
+#
+#         # 一次读取 DI1 + DI2 两个光电（地址0、地址1，共2个点）
+#             result = client.read_discrete_inputs(address=0, count=2)
+#
+#             if not result.isError():
+#                 # 光电1 = DI1 = 地址0
+#                 pe1 = result.bits[0]
+#                 # 光电2 = DI2 = 地址1
+#                 pe2 = result.bits[1]
+#
+#                 if pe1:
+#                     print(f"光电1状态: {pe1}                      , 时间: {time.time_ns() / 1_000_000}")
+#                 if pe2:
+#                     print(f"                   |  光电2状态: {pe2}, 时间: {time.time_ns() / 1_000_000}")
+#             else:
+#                 print("读取失败")
+#
+#             time.sleep(0.1)
+#         client.close()
+#
+#     asyncio.run(main())
+
+
 if __name__ == '__main__':
     from pymodbus.client import ModbusTcpClient
     import time
-    # 模块默认IP和端口
+
+
     async def main():
         await load_config()
 
         IP = get_config("photoelectric.host", "192.168.1.117")
-
-        PORT = get_config("photoelectric.port")
+        PORT = get_config("photoelectric.port", 502)
 
         # 建立连接
-        client = ModbusTcpClient(IP, port=502)
+        client = ModbusTcpClient(IP, port=PORT)
         client.connect()
 
+        print(f"连接到 Modbus 服务器: {IP}:{PORT}")
+        print("=" * 50)
+
         while True:
+            print("\n请选择操作:")
+            print("1. 写入 DO0 (OK 输出)")
+            print("2. 写入 DO1 (NG 输出)")
+            print("3. 写入 DO2 (REJECT 输出)")
+            print("4. 读取所有 DI 状态")
+            print("5. 读取所有 DO 状态")
+            print("0. 退出")
 
-        # 一次读取 DI1 + DI2 两个光电（地址0、地址1，共2个点）
-            result = client.read_discrete_inputs(address=0, count=2)
+            choice = input("请输入选项: ").strip()
 
-            if not result.isError():
-                # 光电1 = DI1 = 地址0
-                pe1 = result.bits[0]
-                # 光电2 = DI2 = 地址1
-                pe2 = result.bits[1]
+            if choice == "0":
+                break
+            elif choice == "1":
+                value = input("设置 DO0 状态 (1=ON, 0=OFF): ").strip()
+                if value in ["1", "0"]:
+                    result = client.write_coil(0, value == "1")
+                    if not result.isError():
+                        print(f"✅ DO0 已设置为 {value}")
+                    else:
+                        print(f"❌ 写入失败: {result}")
+                else:
+                    print("请输入 0 或 1")
 
-                if pe1:
-                    print(f"光电1状态: {pe1}                      , 时间: {time.time_ns() / 1_000_000}")
-                if pe2:
-                    print(f"                   |  光电2状态: {pe2}, 时间: {time.time_ns() / 1_000_000}")
+            elif choice == "2":
+                value = input("设置 DO1 状态 (1=ON, 0=OFF): ").strip()
+                if value in ["1", "0"]:
+                    result = client.write_coil(1, value == "1")
+                    if not result.isError():
+                        print(f"✅ DO1 已设置为 {value}")
+                    else:
+                        print(f"❌ 写入失败: {result}")
+                else:
+                    print("请输入 0 或 1")
+
+            elif choice == "3":
+                value = input("设置 DO2 状态 (1=ON, 0=OFF): ").strip()
+                if value in ["1", "0"]:
+                    result = client.write_coil(2, value == "1")
+                    if not result.isError():
+                        print(f"✅ DO2 已设置为 {value}")
+                    else:
+                        print(f"❌ 写入失败: {result}")
+                else:
+                    print("请输入 0 或 1")
+
+            elif choice == "4":
+                # 读取 DI 状态
+                result = client.read_discrete_inputs(address=0, count=2)
+                if not result.isError():
+                    pe1 = result.bits[0]
+                    pe2 = result.bits[1]
+                    print(f"📊 DI 状态:")
+                    print(f"   PE1 (DI0): {'● 触发' if pe1 else '○ 空闲'}")
+                    print(f"   PE2 (DI1): {'● 触发' if pe2 else '○ 空闲'}")
+                else:
+                    print(f"❌ 读取失败: {result}")
+
+            elif choice == "5":
+                # 读取 DO 状态
+                result = client.read_coils(address=0, count=3)
+                if not result.isError():
+                    do0 = result.bits[0]
+                    do1 = result.bits[1]
+                    do2 = result.bits[2]
+                    print(f"📊 DO 状态:")
+                    print(f"   DO0 (OK):     {'🔴 ON' if do0 else '⚫ OFF'}")
+                    print(f"   DO1 (NG):     {'🔴 ON' if do1 else '⚫ OFF'}")
+                    print(f"   DO2 (REJECT): {'🔴 ON' if do2 else '⚫ OFF'}")
+                else:
+                    print(f"❌ 读取失败: {result}")
             else:
-                print("读取失败")
+                print("无效选项")
 
-            time.sleep(0.1)
         client.close()
+        print("连接已关闭")
+
 
     asyncio.run(main())
