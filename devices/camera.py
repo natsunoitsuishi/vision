@@ -5,6 +5,8 @@ from typing import Optional
 import time
 import json
 
+from pymodbus.client import AsyncModbusTcpClient
+
 from config.manager import get_config
 from domain.enums import DeviceStatus, EventType
 from domain.models import DeviceHealth, CameraResult
@@ -106,7 +108,7 @@ def _parse_to_camera_result(data: dict) -> CameraResult:
         result=data.get("result", "FALSE"),
         code=data.get("code", ""),
         symbology=data.get("symbology", ""),
-        ts_ms=time.time_ns() / 1_000_000 - 100 * float(data.get("camera_delay")),
+        ts_ms=time.time_ns() / 1_000_000 - 75 * float(data.get("camera_delay")),
     )
 
 class OptCameraClient(BaseCameraClient):
@@ -207,6 +209,125 @@ class OptCameraClient(BaseCameraClient):
         return self._connected
 
 
+# 运行验证
+# if __name__ == "__main__":
+#     import asyncio
+#     from pymodbus.client import AsyncModbusTcpClient
+#
+#
+#     class OptCameraHardwareTrigger:
+#         def __init__(self, reader_ip: str = "192.168.1.79", port: int = 512, device_id = 1):
+#             self.reader_ip = reader_ip
+#             self.port = port
+#             self.device_id = device_id  # 新版 pymodbus 用 device_id，不是 slave
+#             self.client = None
+#
+#         async def connect(self):
+#             """建立 ModbusTCP 连接"""
+#             if self.client is None:
+#                 self.client = AsyncModbusTcpClient(
+#                     host=self.reader_ip,
+#                     port=self.port,
+#                     timeout=3
+#                 )
+#             if not self.client.connected:
+#                 await self.client.connect()
+#             return self.client.connected
+#
+#         async def wait_for_trigger(self):
+#             """阻塞等待硬件触发（DI_0 上升沿）"""
+#             if not await self.connect():
+#                 print("❌ 读码器连接失败")
+#                 return None
+#
+#             # 循环读取触发状态寄存器（地址 0x0200，参考 OPT 协议手册）
+#             while True:
+#                 try:
+#                     # 读触发状态：0x01 = 已触发，0x00 = 未触发
+#                     resp = await self.client.read_holding_registers(
+#                         address=0x0200,
+#                         count=1,
+#                         device_id=self.device_id
+#                     )
+#
+#                     print(resp)
+#                     if resp.isError():
+#                         await asyncio.sleep(0.01)
+#                         continue
+#
+#                     trigger_flag = resp.registers[0]
+#                     if trigger_flag == 0x01:
+#                         # 触发成功 → 读取解码结果
+#                         result = await self.read_decode_result()
+#                         # 重置触发状态（写 0x00 清标志）
+#                         await self.client.write_register(
+#                             address=0x0200,
+#                             value=0x00,
+#                             device_id=self.device_id
+#                         )
+#                         return result
+#                 except Exception as e:
+#                     print(f"⚠️ 监控异常: {e}")
+#                 await asyncio.sleep(0.01)  # 10ms 轮询一次
+#
+#         async def read_decode_result(self):
+#             """读取触发后的解码结果（地址 0x0300）"""
+#             resp = await self.client.read_holding_registers(
+#                 address=0x0300,
+#                 count=20,  # 足够存条码
+#                 device_id=self.device_id
+#             )
+#             if resp.isError():
+#                 return None
+#
+#             regs = resp.registers
+#             success = regs[0] == 0x01  # 0x01 = 解码成功
+#             code_len = regs[1]  # 条码字节长度
+#
+#             # 拼接条码内容（每个寄存器 2 字节，大端序）
+#             code_bytes = b""
+#             for i in range(2, 2 + (code_len + 1) // 2):
+#                 if i >= len(regs):
+#                     break
+#                 code_bytes += regs[i].to_bytes(2, byteorder="big")
+#
+#             code = code_bytes.decode("utf-8", errors="ignore").strip("\x00")
+#             return {
+#                 "success": success,
+#                 "code": code,
+#                 "length": code_len
+#             }
+#
+#         async def close(self):
+#             """关闭连接"""
+#             if self.client and self.client.connected:
+#                 await self.client.close()
+#
+
+    # # ------------------------------
+    # # 测试入口
+    # # ------------------------------
+    # async def main():
+    #     trigger = OptCameraHardwareTrigger(reader_ip="192.168.1.79")
+    #     print("📡 等待硬件触发（DI_0 上升沿）...")
+    #     try:
+    #         while True:
+    #             result = await trigger.wait_for_trigger()
+    #             print(result)
+    #             if result:
+    #                 if result["success"]:
+    #                     print(f"✅ 解码成功: {result['code']}")
+    #                 else:
+    #                     print("❌ 触发成功但解码失败")
+    #     except KeyboardInterrupt:
+    #         print("\n🛑 停止监控")
+    #     finally:
+    #         await trigger.close()
+    #
+    #
+    # if __name__ == "__main__":
+    #     asyncio.run(main())
+
 if __name__ == "__main__":
     import socket
     import time
@@ -263,30 +384,7 @@ if __name__ == "__main__":
                         if not code or code == "NG":
                             continue
 
-                        print(f"当前读到: {code}, 时间: {time.time_ns() / 1_000_000}")
-
-                        # ==================== 核心逻辑：稳定拼接条码 ====================
-                        my_str += code
-
-                        # 规则：数字变小 = 新一轮条码开始 → 写入日志
-                        if code.isdigit() and pre_code.isdigit():
-                            if int(code) < int(pre_code):
-                                # 写入前清理：去掉最后一个（新开始的字符）
-                                save_str = my_str[:-1]
-                                if save_str:
-                                    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-                                    log_line = f"{timestamp}    {save_str}\n"
-
-                                    with open(LOG_FILE, "a", encoding="utf-8") as f:
-                                        f.write(log_line)
-
-                                    print(f"\n📝 已保存完整条码: {save_str}")
-
-                                # 重置：保留最后一个字符作为新一轮开始
-                                my_str = code
-
-                        # 更新上一个值
-                        pre_code = code
+                        print(f"data=> {data}, 当前读到: {code}, 时间: {time.time_ns() / 1_000_000}")
 
                     except socket.timeout:
                         continue
@@ -298,9 +396,4 @@ if __name__ == "__main__":
 
         except Exception as e:
             print(f"连接异常: {e}")
-
     main()
-
-# 1774833950987
-# 1774833951097
-# 1774833955357.524

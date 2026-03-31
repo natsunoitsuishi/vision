@@ -183,11 +183,11 @@ class RuntimeService:
         timestamp = event.payload.get("timestamp")
 
         self.logger.info(f"[_on_pe_rise] 收到事件负载, "
-                         f"sensor: {event.payload.get('sensor')}" 
-                         f"channel: {event.payload.get('channel')}" 
-                         f"state: {event.payload.get('state')}" 
-                         f"previous_state: {event.payload.get('previous_state')}" 
-                         f"timestamp: {event.payload.get('timestamp')}"
+                         f"sensor: {event.payload.get('sensor')} " 
+                         f"channel: {event.payload.get('channel')} " 
+                         f"state: {event.payload.get('state')} " 
+                         f"previous_state: {event.payload.get('previous_state')} " 
+                         f"timestamp: {event.payload.get('timestamp')} "
                          )
 
         if sensor == "PE1":
@@ -274,17 +274,24 @@ class RuntimeService:
                              f"ts_ms: {event.payload.get('ts_ms')} "
                              )
 
+            # result_key = f"{payload.get('code')}_{payload.get('camera_id')}"
+            #
+            # if result_key in self._processed_results and event.payload.get("ts_ms") - self._processed_time <= 300:
+            #     self.logger.info(f"重复结果，忽略: {result_key}")
+            #     return
+
             result_key = f"{payload.get('code')}_{payload.get('camera_id')}"
+            current_ts = payload.get("ts_ms")
 
-            if result_key in self._processed_results and event.payload.get("ts_ms") - self._processed_time <= 300:
-                self.logger.info(f"重复结果，忽略: {result_key}")
-                return
-            self._processed_results.add(result_key)
-            self._processed_time = event.payload.get("ts_ms")
-
-            # 限制缓存大小
-            if len(self._processed_results) > 100:
-                self._processed_results.clear()
+            # 检查重复
+            if result_key in self._processed_results:
+                last_ts = self._processed_time
+                if current_ts - last_ts <= 300:
+                    self.logger.info(f"重复结果（{current_ts - last_ts:.0f}ms内），忽略: {result_key}")
+                    return
+                else:
+                    # 超过300ms，允许重新处理（更新缓存）
+                    self.logger.debug(f"结果已过期（{current_ts - last_ts:.0f}ms），重新处理")
 
             # 获取活动轨迹
             active_tracks = self.track_manager.get_active_tracks()
@@ -306,13 +313,21 @@ class RuntimeService:
             track = self.result_binder.bind(camera_result, active_tracks)
 
             if track is None:
-                self.logger.error(f"[相机{payload.get('camera_id')}] 结果无法绑定到任何轨迹")
-                await self._raise_alarm("UNBOUND_RESULT", f"扫码结果无法绑定: {camera_result.code}")
+                self.logger.info(f"[相机{payload.get('camera_id')} 无结果")
+                # self.logger.error(f"[相机{payload.get('camera_id')}] 结果无法绑定到任何轨迹")
+                # await self._raise_alarm("UNBOUND_RESULT", f"扫码结果无法绑定: {camera_result.code}")
                 return
+
+            else:
+                self._processed_results.add(result_key)
+                self._processed_time = event.payload.get("ts_ms")
+
+                # 限制缓存大小
+                if len(self._processed_results) > 100:
+                    self._processed_results.clear()
 
             # 添加结果到轨迹
             self.track_manager.add_camera_result(track.track_id, camera_result)
-
             # 保存相机结果到数据库
             await self.repository.save_camera_result({
                 "track_id": track.track_id,

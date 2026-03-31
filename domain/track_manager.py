@@ -169,10 +169,6 @@ class TrackManager:
             最终化的轨迹对象
         """
 
-        print(f"[TrackManager] 进入函数 轨迹最终化: {track_id}, 状态={status.value}, "
-                          f"剩余活动轨迹={len(self._active_tracks)}")
-
-
         track = self.get_track_by_id(track_id)
         if track is None:
             self._logger.warning(f"[TrackManager] 最终化失败，轨迹不存在: {track_id}")

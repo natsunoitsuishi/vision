@@ -30,5 +30,5 @@ decision:
 
 trigger:
   ttl_ms: 500
-pe1_to_pe2_dist: 0.39
-pe2_to_camera_dist: 0.36
+pe1_to_pe2_dist: 0.305
+pe2_to_camera_dist: 0.38
