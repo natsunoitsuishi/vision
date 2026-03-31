@@ -220,7 +220,7 @@ class AppController:
 
             ## 7. UI 层 - 最后启动，确保后台已就绪
             self.state = AppState.INIT_UI
-            # await self._init_main_window()
+            await self._init_main_window()
 
             # 8. 启动完成
             self.state = AppState.READY
@@ -234,6 +234,16 @@ class AppController:
             self.state = AppState.FAULT
             await self._handle_startup_failure(e)
             raise
+
+    async def _init_main_window(self):
+        """初始化主窗口"""
+        from ui.main_window import MainWindow
+
+        self.main_window = MainWindow(
+            event_bus=self.event_bus,
+            runtime_service=self.runtime_service
+        )
+        self.main_window.show()
 
     async def _start_runtime(self) -> None:
         """启动运行时服务"""

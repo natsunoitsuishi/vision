@@ -333,7 +333,7 @@ class RuntimeService:
             })
 
             self.logger.info(f"[相机{payload.get('camera_id')}] 结果绑定到轨迹 {track.track_id}: "
-                             f"code={camera_result.code}, success={camera_result.result == 'OK'}")
+                             f"code={camera_result.code}, success={camera_result.result == 'TRUE'}")
 
             track = self.track_manager.get_track_by_id(track.track_id)
 
@@ -347,6 +347,8 @@ class RuntimeService:
                 track.final_code = successful[0].code if successful else None
 
                 self.logger.info(f"[相机{payload.get('camera_id')}] 轨迹 {track.track_id} 判定完成: {track.final_status.value}")
+
+                self.archive_service.handle_scan_result(track.track_id, camera_result.code)
 
                 # 输出结果
                 await self._output_result(track)

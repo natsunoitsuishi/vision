@@ -93,8 +93,8 @@ def _code_to_path(code: str) -> Optional[int]:
         路径ID，失败返回 None
     """
     try:
-        code_num = int(code)
-        if 1 <= code_num <= 6:
+        code_num = int(code) % 4 + 1
+        if 1 <= code_num <= 4:
             return code_num
     except ValueError:
         pass
@@ -214,11 +214,13 @@ class ArchiveService:
         self._running = True
         self.logger.info("BoxTracker 启动")
 
+        loop = asyncio.get_running_loop()
+
         # 启动位置推算循环
-        self._position_task = asyncio.create_task(self._position_loop())
+        self._position_task = loop.create_task(self._position_loop())
 
         # 启动摆轮机触发监控循环
-        self._divert_monitor_task = asyncio.create_task(self._divert_monitor_loop())
+        self._divert_monitor_task = loop.create_task(self._divert_monitor_loop())
 
         # 建立 TCP 连接
         await self._connect_tcp()
@@ -358,6 +360,14 @@ class ArchiveService:
                 break
             except Exception as e:
                 self.logger.error(f"位置推算循环异常: {e}", exc_info=True)
+                # 检查是否是事件循环错误
+                if "no running event loop" in str(e):
+                    # 尝试重新获取事件循环
+                    try:
+                        loop = asyncio.get_event_loop()
+                        self.logger.info("重新获取事件循环成功")
+                    except:
+                        self.logger.warning("无法获取事件循环，等待后重试")
                 await asyncio.sleep(0.1)
 
         self.logger.info("位置推算循环结束")
@@ -524,6 +534,7 @@ class ArchiveService:
             self.logger.warning(f"码值 {code} 无法映射到有效路径")
             return None
 
+        print(self.paths)
         path = self.paths.get(path_id)
         if not path:
             self.logger.error(f"路径 {path_id} 不存在")
