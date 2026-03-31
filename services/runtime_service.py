@@ -274,12 +274,6 @@ class RuntimeService:
                              f"ts_ms: {event.payload.get('ts_ms')} "
                              )
 
-            # result_key = f"{payload.get('code')}_{payload.get('camera_id')}"
-            #
-            # if result_key in self._processed_results and event.payload.get("ts_ms") - self._processed_time <= 300:
-            #     self.logger.info(f"重复结果，忽略: {result_key}")
-            #     return
-
             result_key = f"{payload.get('code')}_{payload.get('camera_id')}"
             current_ts = payload.get("ts_ms")
 
