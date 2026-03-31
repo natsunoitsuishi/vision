@@ -7,7 +7,6 @@
 2. 实时推算每个鞋盒的当前位置
 3. 扫码成功后规划目标路径
 4. 到达摆轮机前500mm发送TCP信号
-5. 提供 HTTP API 查询位置
 """
 
 import asyncio
@@ -81,6 +80,45 @@ class BoxTrackingData:
             "length_mm": round(self.length_mm, 1),
             "last_update_ms": self.last_update_ms
         }
+
+
+def _code_to_path(code: str) -> Optional[int]:
+    """
+    将扫码码值映射到路径ID
+
+    Args:
+        code: 扫码码值
+
+    Returns:
+        路径ID，失败返回 None
+    """
+    try:
+        code_num = int(code)
+        if 1 <= code_num <= 6:
+            return code_num
+    except ValueError:
+        pass
+
+    # 可以根据其他规则扩展
+    return None
+
+
+def _get_divert_for_path(path: PathConfig) -> Optional[int]:
+    """
+    根据路径配置获取对应的摆轮机ID
+
+    Args:
+        path: 路径配置
+
+    Returns:
+        摆轮机ID
+    """
+    if not path.divert_units:
+        return None
+
+    # 返回该路径上的第一个摆轮机
+    # 可以根据业务规则选择不同的摆轮机
+    return path.divert_units[0]
 
 
 class ArchiveService:
@@ -185,7 +223,7 @@ class ArchiveService:
         # 建立 TCP 连接
         await self._connect_tcp()
 
-        self.logger.info(f"BoxTracker 启动完成，HTTP API: http://{self._http_host}:{self._http_port}")
+        self.logger.info(f"BoxTracker 启动完成")
 
     async def stop(self) -> None:
         """停止跟踪服务"""
@@ -286,7 +324,6 @@ class ArchiveService:
         while self._running:
             try:
                 now_ms = time.time_ns() / 1_000_000
-
                 # 更新所有活动鞋盒的位置
                 for box in list(self._active_boxes.values()):
                     if box.has_exited:
@@ -397,7 +434,7 @@ class ArchiveService:
     # 光电事件处理
     # =============================
 
-    def handle_pe1(self, track: BoxTrack) -> None:
+    def handle_on_pe1(self, track: BoxTrack) -> None:
         """
         处理 PE1 上升沿事件（鞋盒进入入口）
 
@@ -427,7 +464,7 @@ class ArchiveService:
         self.logger.info(f"[PE1] 创建鞋盒跟踪: {track.track_id}, "
                          f"速度={box.speed_mm_s:.1f}mm/s")
 
-    def handle_pe2(self, track: BoxTrack) -> None:
+    def handle_on_pe2(self, track: BoxTrack) -> None:
         """
         处理 PE2 上升沿事件（鞋盒到达出口）
 
@@ -482,7 +519,7 @@ class ArchiveService:
             return None
 
         # 1. 根据码值分配路径
-        path_id = self._code_to_path(code)
+        path_id = _code_to_path(code)
         if path_id is None:
             self.logger.warning(f"码值 {code} 无法映射到有效路径")
             return None
@@ -494,7 +531,7 @@ class ArchiveService:
 
         # 2. 获取该路径上的摆轮机
         # 根据业务规则选择摆轮机（这里简单取第一个）
-        target_divert_id = self._get_divert_for_path(path)
+        target_divert_id = _get_divert_for_path(path)
         if target_divert_id is None:
             self.logger.warning(f"路径 {path_id} 没有配置摆轮机")
             return None
@@ -509,43 +546,6 @@ class ArchiveService:
                          f"码值={code}, 路径={path_id}, 摆轮机={target_divert_id}")
 
         return target_divert_id
-
-    def _code_to_path(self, code: str) -> Optional[int]:
-        """
-        将扫码码值映射到路径ID
-
-        Args:
-            code: 扫码码值
-
-        Returns:
-            路径ID，失败返回 None
-        """
-        try:
-            code_num = int(code)
-            if 1 <= code_num <= 6:
-                return code_num
-        except ValueError:
-            pass
-
-        # 可以根据其他规则扩展
-        return None
-
-    def _get_divert_for_path(self, path: PathConfig) -> Optional[int]:
-        """
-        根据路径配置获取对应的摆轮机ID
-
-        Args:
-            path: 路径配置
-
-        Returns:
-            摆轮机ID
-        """
-        if not path.divert_units:
-            return None
-
-        # 返回该路径上的第一个摆轮机
-        # 可以根据业务规则选择不同的摆轮机
-        return path.divert_units[0]
 
     # =============================
     # 队列管理
