@@ -60,12 +60,15 @@ class RunMode(Enum):
 # ============================================================
 class TrackStatus(Enum):
     """跟踪状态枚举 - 定义鞋盒跟踪流程的生命周期状态"""
-    CREATED = "CREATED"  # 已创建：跟踪记录刚创建，尚未开始跟踪
-    TRACKING = "TRACKING"  # 跟踪中：正在跟踪鞋盒移动
-    WINDOW_OPEN = "WINDOW_OPEN"  # 扫描窗口打开：允许相机扫描的时间窗口
-    WAITING_RESULT = "WAITING_RESULT"  # 等待结果：已触发相机，等待识别结果
-    FINALIZED = "FINALIZED"  # 已完成：跟踪流程正常结束
-    EXPIRED = "EXPIRED"  # 已过期：跟踪超时或异常终止
+    CREATED = "CREATED"                 # 已创建：跟踪记录刚创建，尚未开始跟踪
+    TRACKING = "TRACKING"               # 跟踪中：正在跟踪鞋盒移动
+    WINDOW_OPEN = "WINDOW_OPEN"         # 扫描窗口打开：允许相机扫描的时间窗口
+    WAITING_RESULT = "WAITING_RESULT"   # 等待结果：已触发相机，等待识别结果
+    PENDING = "pending"                 # 已创建，等待扫码
+    WAITING_DIVERT = "waiting"          # 已分配路径，等待触发摆轮机
+    DIVERT_TRIGGERED = "triggered"      # 已触发转向
+    FINALIZED = "FINALIZED"             # 已完成：跟踪流程正常结束
+    EXPIRED = "EXPIRED"                 # 已过期：跟踪超时或异常终止
 
     def is_active(self) -> bool:
         """判断是否为活跃状态 - 表示跟踪流程仍在进行中"""

@@ -21,17 +21,9 @@ from enum import Enum
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from config.path_config import DEFAULT_DIVERT_UNITS, DEFAULT_PATHS, PathConfig, PathType
+from domain import TrackStatus
 from domain.models import BoxTrack
 from config.manager import get_config
-
-
-class TrackStatus(Enum):
-    """鞋盒跟踪状态"""
-    PENDING = "pending"  # 已创建，等待扫码
-    WAITING_DIVERT = "waiting"  # 已分配路径，等待触发摆轮机
-    DIVERT_TRIGGERED = "triggered"  # 已触发转向
-    COMPLETED = "completed"  # 已完成
-
 
 @dataclass
 class BoxTrackingData:
@@ -139,7 +131,7 @@ class ArchiveService:
         # ========== 物理参数配置 ==========
         self.pe1_pos_mm = 0.0  # PE1 位置（原点）
         self.pe2_pos_mm = get_config("pe1_to_pe2_dist") * 1000  # PE2 位置
-        self.camera_pos_mm = self.pe2_pos_mm + get_config("pe2_to_camera_dist", 0.36) * 1000  # 相机位置
+        self.camera_pos_mm = self.pe2_pos_mm + get_config("pe2_to_camera_dist") * 1000  # 相机位置
 
         # 传送带参数
         self.conveyor_speed_mm_s = get_config("conveyor.default_speed_mm_s", 500.0)
@@ -178,15 +170,9 @@ class ArchiveService:
         self._divert_monitor_task: Optional[asyncio.Task] = None
 
         # ========== TCP 配置 ==========
-        self._tcp_host = get_config("divert.tcp_host", "192.168.1.100")
-        self._tcp_port = get_config("divert.tcp_port", 8888)
+        self._tcp_host = get_config("divert.tcp_host")
+        self._tcp_port = get_config("divert.tcp_port")
         self._tcp_writer: Optional[asyncio.StreamWriter] = None
-
-        # ========== HTTP 服务器 ==========
-        self._http_port = get_config("archive_service.http_port", 5000)
-        self._http_host = get_config("archive_service.http_host", "127.0.0.1")
-        self._http_server: Optional[HTTPServer] = None
-        self._http_thread: Optional[threading.Thread] = None
 
         # ========== 统计信息 ==========
         self._stats = {
@@ -343,7 +329,7 @@ class ArchiveService:
                     # 检查是否已离开传送带
                     if box.current_pos_mm >= self.max_pos_mm:
                         box.has_exited = True
-                        box.status = TrackStatus.COMPLETED
+                        box.status = TrackStatus.FINALIZED
                         self._stats["exited_count"] += 1
                         self.logger.debug(f"鞋盒 {box.track_id} 已离开传送带，"
                                           f"最后位置={box.current_pos_mm:.1f}mm")
@@ -669,7 +655,7 @@ class ArchiveService:
         """完成鞋盒跟踪"""
         box = self._active_boxes.pop(track_id, None)
         if box:
-            box.status = TrackStatus.COMPLETED
+            box.status = TrackStatus.FINALIZED
             self._finished_boxes.append(box)
 
             # 清理过多的已完成记录
@@ -715,8 +701,7 @@ class ArchiveService:
             "trigger_distance_mm": self.TRIGGER_DISTANCE_MM,
             "conveyor_speed_mm_s": self.conveyor_speed_mm_s,
             "tcp_host": self._tcp_host,
-            "tcp_port": self._tcp_port,
-            "http_port": self._http_port
+            "tcp_port": self._tcp_port
         }
 
 

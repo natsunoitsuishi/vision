@@ -16,7 +16,7 @@ def _calc_window_time(box_speed_mm_s: float, pe2_on_ms: float) -> Tuple[float, f
         pe2_on_ms: PE2触发时间 (毫秒)
     """
     # 获取配置（米转毫米）
-    pe2_to_camera_dist_m = get_config("pe2_to_camera_dist", 0.36)
+    pe2_to_camera_dist_m = get_config("pe2_to_camera_dist")
     pe2_to_camera_dist_mm = pe2_to_camera_dist_m * 1000  # 360 mm
 
     # 计算从 PE2 到相机的旅行时间（毫秒）

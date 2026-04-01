@@ -1,11 +1,7 @@
 import asyncio
-from infra.logging.setup import get_logger
 import signal
 from enum import Enum
 from typing import Optional, Dict, List
-
-from PySide2.QtWidgets import QApplication
-from qasync import QEventLoop
 
 from config import get_config
 from config.manager import load_config
@@ -23,7 +19,6 @@ from services import ArchiveService
 from services.event_bus import EventBus
 from services.runtime_service import RuntimeService
 
-from ui.main_window import MainWindow
 
 class AppState(Enum):
     """应用状态枚举"""
@@ -53,7 +48,7 @@ class AppController:
     5. 提供降级和故障恢复能力
     """
 
-    def __init__(self, qt_app: QApplication, loop: QEventLoop):
+    def __init__(self):
         """
         初始化应用控制器
 
@@ -61,8 +56,7 @@ class AppController:
             qt_app: Qt 应用实例
             loop: asyncio 事件循环
         """
-        self.qt_app = qt_app
-        self.loop = loop
+        # self.qt_app = qt_app
 
         # 应用状态
         self.state = AppState.BOOT
@@ -104,17 +98,33 @@ class AppController:
         # 后台任务
         self._background_tasks: List[asyncio.Task] = []
 
+    #     # 注册信号处理
+    #     self._register_signal_handlers()
+    #
+    # def _register_signal_handlers(self) -> None:
+    #     """注册系统信号处理器"""
+    #     for sig in (signal.SIGINT, signal.SIGTERM):
+    #         try:
+    #             self.loop.add_signal_handler(sig, lambda: asyncio.create_task(self.shutdown()))
+    #         except NotImplementedError:
+    #             # Windows 不支持 add_signal_handler
+    #             signal.signal(sig, lambda s, f: asyncio.create_task(self.shutdown()))
+
         # 注册信号处理
         self._register_signal_handlers()
 
+    # ====================== 关键修改：无GUI信号处理（跨平台稳定） ======================
     def _register_signal_handlers(self) -> None:
-        """注册系统信号处理器"""
+        """注册系统信号处理器（纯asyncio版，无Qt依赖）"""
+        async def shutdown_handler():
+            await self.shutdown()
+
+        def signal_callback(sig_num, frame):
+            asyncio.create_task(shutdown_handler())
+
+        # 注册 Ctrl+C 和系统关闭信号
         for sig in (signal.SIGINT, signal.SIGTERM):
-            try:
-                self.loop.add_signal_handler(sig, lambda: asyncio.create_task(self.shutdown()))
-            except NotImplementedError:
-                # Windows 不支持 add_signal_handler
-                signal.signal(sig, lambda s, f: asyncio.create_task(self.shutdown()))
+            signal.signal(sig, signal_callback)
 
     async def startup(self) -> None:
         """
@@ -175,19 +185,19 @@ class AppController:
             # 4. 对外接口层 - 依赖配置和业务模块
             # 创建调度客户端
             self.scheduler_client = SchedulerClient(
-                host=get_config("scheduler_client_host", "127.0.0.1"),
-                port=get_config("scheduler_client_port", 8080),
-                device_id=get_config("scheduler_client_id", "VG-01")
+                host=get_config("scheduler_client.host"),
+                port=get_config("scheduler_client.port"),
+                device_id=get_config("scheduler_client.id")
             )
             await self.scheduler_client.connect()
             self.logger.info("调度上位机客户端已启动")
 
             # 创建 MES 客户端
             self.mes_client = MesClient(
-                host=get_config("mes_host", "127.0.0.1"),
-                port=get_config("mes_port", 9090),
-                device_id=get_config("app.mes_client_id", "VG-01"),
-                line_id=get_config("app.line_id", "LINE-01")
+                host=get_config("mes.host"),
+                port=get_config("mes.port"),
+                device_id=get_config("mes_client.id"),
+                line_id=get_config("mes_client.line_id")
             )
             await self.mes_client.connect()
             self.logger.info("MES 客户端已启动")
@@ -220,7 +230,7 @@ class AppController:
 
             ## 7. UI 层 - 最后启动，确保后台已就绪
             self.state = AppState.INIT_UI
-            await self._init_main_window()
+            # await self._init_main_window()
 
             # 8. 启动完成
             self.state = AppState.READY
@@ -235,15 +245,15 @@ class AppController:
             await self._handle_startup_failure(e)
             raise
 
-    async def _init_main_window(self):
-        """初始化主窗口"""
-        from ui.main_window import MainWindow
-
-        self.main_window = MainWindow(
-            event_bus=self.event_bus,
-            runtime_service=self.runtime_service
-        )
-        self.main_window.show()
+    # async def _init_main_window(self):
+        # """初始化主窗口"""
+        # from ui.main_window import MainWindow
+        #
+        # self.main_window = MainWindow(
+        #     event_bus=self.event_bus,
+        #     runtime_service=self.runtime_service
+        # )
+        # self.main_window.show()
 
     async def _start_runtime(self) -> None:
         """启动运行时服务"""
@@ -313,8 +323,8 @@ class AppController:
         self._shutdown_event.set()
         self.logger.info("Application shutdown completed")
 
-        # 退出 Qt 应用
-        self.qt_app.quit()
+        # # 退出 Qt 应用
+        # self.qt_app.quit()
 
     async def restart_runtime(self) -> None:
         """

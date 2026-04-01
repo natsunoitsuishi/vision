@@ -280,7 +280,7 @@ class RuntimeService:
             # 检查重复
             if result_key in self._processed_results:
                 last_ts = self._processed_time
-                if current_ts - last_ts <= 300:
+                if current_ts - last_ts <= get_config("repeat_check_time"):
                     self.logger.info(f"重复结果（{current_ts - last_ts:.0f}ms内），忽略: {result_key}")
                     return
                 else:
@@ -302,7 +302,10 @@ class RuntimeService:
                 symbology=payload.get("symbology"),
                 raw_payload=payload,
             )
-
+            #   1774951546940.0999~
+            #   1774951544042
+            #   1774951547740.0999
+#
             # 绑定结果到轨迹
             track = self.result_binder.bind(camera_result, active_tracks)
 

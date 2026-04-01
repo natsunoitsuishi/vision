@@ -208,7 +208,7 @@ class TrackManager:
 
         for track in self._active_tracks:
             # 检查是否超时
-            if now_ms - track.created_ms > get_config("track.ttl_ms", 1500):
+            if now_ms - track.created_ms > get_config("track.timeout_ms"):
                 # 超时轨迹
                 track.status = TrackStatus.EXPIRED
                 if track.final_status is None:
@@ -216,7 +216,7 @@ class TrackManager:
                 expired_tracks.append(track)
                 self._finished_tracks.append(track)
                 self._logger.warning(f"[TrackManager] 轨迹超时: {track.track_id}, "
-                                     f"创建时间={track.created_ms}, 超时={get_config('track.ttl_ms', 150)}ms")
+                                     f"创建时间={track.created_ms}, 超时={get_config('track.timeout_ms')}ms")
             else:
                 remaining_tracks.append(track)
 

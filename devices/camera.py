@@ -108,7 +108,7 @@ def _parse_to_camera_result(data: dict) -> CameraResult:
         result=data.get("result", "FALSE"),
         code=data.get("code", ""),
         symbology=data.get("symbology", ""),
-        ts_ms=time.time_ns() / 1_000_000 - 75 * float(data.get("camera_delay")),
+        ts_ms=time.time_ns() / 1_000_000 - get_config("camera.delay", 400),
     )
 
 class OptCameraClient(BaseCameraClient):
@@ -173,7 +173,7 @@ class OptCameraClient(BaseCameraClient):
                     data = json.loads(buffer.decode().strip())
                     await self._handle_message(data)
                 except json.JSONDecodeError:
-                    self.logger.error("Json Failed ...")
+                    # self.logger.error("Json Failed ...")
                     continue
 
             except asyncio.TimeoutError:
@@ -384,7 +384,14 @@ if __name__ == "__main__":
                         if not code or code == "NG":
                             continue
 
-                        print(f"data=> {data}, 当前读到: {code}, 时间: {time.time_ns() / 1_000_000}")
+                        import time
+                        from datetime import datetime
+
+                        def format_ms(ms: float) -> str:
+                            # 转秒 → 格式化 → 截取到毫秒（3位）
+                            return datetime.fromtimestamp(ms / 1000).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+                        print(f"data=> {data}, 当前读到: {code}, 时间: {format_ms( time.time_ns() / 1_000_000 )}")
 
                     except socket.timeout:
                         continue
