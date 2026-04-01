@@ -454,13 +454,22 @@ class RuntimeService:
         """超时清理循环"""
         self.logger.info("清理循环启动")
 
+        queue_print_counter = 0
+
         while self._running:
             try:
                 await asyncio.sleep(1)  # 每秒检查一次
 
+                # ========== 新增：定时打印队列状态 ==========
+                queue_print_counter += 1
+                if queue_print_counter >= 10 and self.archive_service:  # 每10秒打印一次
+                    self.archive_service.print_queue()
+                    queue_print_counter = 0
+                # ============================================
+
                 # 清理超时轨迹
-                now_ts = time.time()
-                expired_tracks = self.track_manager.cleanup_expired(now_ts)
+                now_ms = time.time_ns() / 1_000_000
+                expired_tracks = self.track_manager.cleanup_expired(now_ms)
 
                 for track in expired_tracks:
                     self.logger.warning(f"清理超时轨迹: {track.track_id}")

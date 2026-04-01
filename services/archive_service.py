@@ -187,6 +187,68 @@ class ArchiveService:
         self.logger.info(f"BoxTracker 初始化完成: PE1={self.pe1_pos_mm}mm, "
                          f"PE2={self.pe2_pos_mm}mm, 相机={self.camera_pos_mm}mm")
 
+    def get_queue_status(self) -> dict:
+        """获取队列状态信息"""
+        now_ms = time.time_ns() / 1_000_000
+
+        queue_items = []
+        for box in self._active_boxes.values():
+            # 计算实时位置
+            elapsed_s = (now_ms - box.last_update_ms) / 1000.0
+            current_pos = box.current_pos_mm + (box.speed_mm_s * elapsed_s)
+
+            queue_items.append({
+                "track_id": box.track_id,
+                "position": round(current_pos, 1),
+                "speed": round(box.speed_mm_s, 1),
+                "status": box.status.value,
+                "target_divert": box.target_divert_id,
+                "created_ms": box.created_ms,
+                "age_ms": round(now_ms - box.created_ms, 0)
+            })
+
+        # 按位置排序
+        queue_items.sort(key=lambda x: x["position"])
+
+        return {
+            "active_count": len(self._active_boxes),
+            "finished_count": len(self._finished_boxes),
+            "queue": queue_items,
+            "head_box": queue_items[-1] if queue_items else None,
+            "tail_box": queue_items[0] if queue_items else None,
+            "timestamp": now_ms
+        }
+
+    def print_queue(self) -> None:
+        """打印队列状态到控制台"""
+        status = self.get_queue_status()
+
+        self.logger.info("=" * 60)
+        self.logger.info(f"📦 鞋盒队列状态 | 活动: {status['active_count']} | 已完成: {status['finished_count']}")
+        self.logger.info("-" * 60)
+
+        if not status['queue']:
+            self.logger.info("队列为空")
+        else:
+            self.logger.info(f"{'位置(mm)':<12} {'轨迹ID':<25} {'速度':<10} {'状态':<12} {'目标摆轮机'}")
+            self.logger.info("-" * 60)
+
+            for item in status['queue']:
+                self.logger.info(
+                    f"{item['position']:<12.1f} "
+                    f"{item['track_id']:<25} "
+                    f"{item['speed']:<10.1f} "
+                    f"{item['status']:<12} "
+                    f"{item['target_divert'] or '-'}"
+                )
+
+            if status['head_box']:
+                self.logger.info("-" * 60)
+                self.logger.info(f"📍 头盒: {status['head_box']['track_id']} @ {status['head_box']['position']:.1f}mm")
+                self.logger.info(f"📍 尾盒: {status['tail_box']['track_id']} @ {status['tail_box']['position']:.1f}mm")
+
+        self.logger.info("=" * 60)
+
     # =============================
     # 生命周期管理
     # =============================

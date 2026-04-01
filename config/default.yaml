@@ -44,7 +44,7 @@ divert:
   tcp_port: 8888
 
 track:
-  timeout_ms: 1500
+  timeout_ms: 5000
 
 trigger:
   ttl_ms: 300
