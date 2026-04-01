@@ -18,6 +18,7 @@ from infra.logging.setup import setup_logging, get_logger
 from services import ArchiveService
 from services.event_bus import EventBus
 from services.runtime_service import RuntimeService
+from ui.main_window import MainWindow
 
 
 class AppState(Enum):
@@ -93,7 +94,7 @@ class AppController:
         self.archive_service: Optional[ArchiveService] = None
 
         # UI
-        # self.main_window: Optional[MainWindow] = None
+        self.main_window: Optional[MainWindow] = None
 
         # 后台任务
         self._background_tasks: List[asyncio.Task] = []
@@ -230,7 +231,7 @@ class AppController:
 
             ## 7. UI 层 - 最后启动，确保后台已就绪
             self.state = AppState.INIT_UI
-            # await self._init_main_window()
+            await self._init_main_window()
 
             # 8. 启动完成
             self.state = AppState.READY
@@ -244,6 +245,13 @@ class AppController:
             self.state = AppState.FAULT
             await self._handle_startup_failure(e)
             raise
+
+    async def _init_main_window(self) -> None:
+        """初始化主窗口"""
+        self.main_window = MainWindow(event_bus=self.event_bus)
+        self.main_window.set_archive_service(self.archive_service)
+        self.main_window.start()
+        self.logger.info("主窗口已启动")
 
     async def _start_runtime(self) -> None:
         """启动运行时服务"""

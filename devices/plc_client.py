@@ -2,9 +2,8 @@
 """
 PLC Modbus TCP 客户端 - 控制摆轮机方向
 """
-import asyncio
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
@@ -108,7 +107,7 @@ class PlcDivertClient:
             result = await self._client.write_register(
                 address=self.direction_register,
                 value=value,
-                slave=1  # 设备地址，通常为1
+                device_id=1  # 设备地址，通常为1
             )
 
             if result.isError():
