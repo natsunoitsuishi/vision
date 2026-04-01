@@ -82,7 +82,7 @@ class MainWindow:
 
         # 注意：需要在主线程中处理事件回调
         # 使用 after 方法将事件处理调度到 Tkinter 主线程
-        def on_ui_update(event: AppEvent):
+        async def on_ui_update(event: AppEvent):
             # 在 Tkinter 主线程中刷新 UI
             if self._root:
                 self._root.after(0, self._refresh_display)

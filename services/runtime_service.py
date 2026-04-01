@@ -100,6 +100,8 @@ class RuntimeService:
 
         self._processed_results = set()
         self._processed_time = time.time_ns() / 1_000_000
+        
+        self.time_diff_ms: Optional[float] = None
 
 
     # =============================
@@ -214,19 +216,16 @@ class RuntimeService:
             # 计算速度
             if track.pe1_on_ms is not None:
                 time_diff_ms = timestamp - track.pe1_on_ms
-                sensor_distance = get_config("pe1_to_pe2_dist")
-                if time_diff_ms > 0:
-                    # 配置中是米，需要转换为毫米
-                    pe1_to_pe2_dist_m = get_config("pe1_to_pe2_dist")
-                    pe1_to_pe2_dist_mm = pe1_to_pe2_dist_m * 1000  # 390 mm
-                    time_diff_sec = time_diff_ms / 1000  # 转换为秒
-                    track.speed_mm_s = pe1_to_pe2_dist_mm / time_diff_sec
-                    self.logger.info(f"[PE2] 速度={track.speed_mm_s:.10f}mm/s")
-
-                    self.archive_service.handle_on_pe2(track)
+                if time_diff_ms > 0 and self.time_diff_ms is None:
+                    self.time_diff_ms = time_diff_ms
                 else:
                     self.logger.error(f"time_diff_ms <= 0")
                     # track.speed_mm_s = get_config("conveyor.default_speed_mm_s", 800)
+
+                track.speed_mm_s = get_config("pe1_to_pe2_dist") * 1000 / (self.time_diff_ms / 1000)
+                self.archive_service.handle_on_pe2(track)
+                self.logger.info(f"[PE2] 速度={track.speed_mm_s:.10f}mm/s")
+
             else:
                 self.logger.error(f"track.pe1_on_ms is None")
                 # track.speed_mm_s = get_config("conveyor.default_speed_mm_s", 800)
