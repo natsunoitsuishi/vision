@@ -2,9 +2,7 @@
 from enum import Enum, auto
 from typing import List, Optional
 
-# ============================================================
-# 事件类型枚举（用于事件驱动架构）
-# ============================================================
+
 class EventType(Enum):
     """系统事件类型枚举 - 用于事件驱动架构中的事件分类"""
     PE_RISE             = "PE_RISE"                 # 光电传感器上升沿事件（物体进入检测区域）
@@ -34,9 +32,6 @@ class EventType(Enum):
         return [cls.TIMER_TRIGGER, cls.TRACK_TIMEOUT, cls.OPERATOR_CMD]
 
 
-# ============================================================
-# 运行模式枚举
-# ============================================================
 class RunMode(Enum):
     """运行模式枚举 - 定义系统的不同工作模式"""
     LR = "LR"  # 长距离模式（Long Range）：适用于长距离扫描场景
@@ -55,18 +50,17 @@ class RunMode(Enum):
         """判断是否为反馈模式"""
         return self == RunMode.FB
 
-# ============================================================
-# 跟踪状态枚举
-# ============================================================
 class TrackStatus(Enum):
     """跟踪状态枚举 - 定义鞋盒跟踪流程的生命周期状态"""
     CREATED = "CREATED"                 # 已创建：跟踪记录刚创建，尚未开始跟踪
     TRACKING = "TRACKING"               # 跟踪中：正在跟踪鞋盒移动
     WINDOW_OPEN = "WINDOW_OPEN"         # 扫描窗口打开：允许相机扫描的时间窗口
     WAITING_RESULT = "WAITING_RESULT"   # 等待结果：已触发相机，等待识别结果
+
     PENDING = "pending"                 # 已创建，等待扫码
     WAITING_DIVERT = "waiting"          # 已分配路径，等待触发摆轮机
     DIVERT_TRIGGERED = "triggered"      # 已触发转向
+
     FINALIZED = "FINALIZED"             # 已完成：跟踪流程正常结束
     EXPIRED = "EXPIRED"                 # 已过期：跟踪超时或异常终止
 
@@ -110,9 +104,6 @@ class TrackStatus(Enum):
         return [TrackStatus.FINALIZED, TrackStatus.EXPIRED]
 
 
-# ============================================================
-# 决策状态枚举
-# ============================================================
 class DecisionStatus(Enum):
     """决策状态枚举 - 定义最终识别决策结果"""
     OK          = "OK"           # 成功：成功识别条码
@@ -157,9 +148,6 @@ class DecisionStatus(Enum):
         return [cls.NO_READ, cls.AMBIGUOUS, cls.TIMEOUT, cls.FAULT]
 
 
-# ============================================================
-# 设备状态枚举
-# ============================================================
 class DeviceStatus(Enum):
     """设备状态枚举 - 定义设备的运行健康状态"""
     ONLINE      = "ONLINE"       # 在线：设备正常运行，通讯正常

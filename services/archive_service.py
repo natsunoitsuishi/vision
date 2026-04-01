@@ -765,13 +765,3 @@ class ArchiveService:
             "tcp_host": self._tcp_host,
             "tcp_port": self._tcp_port
         }
-
-
-
-# # =============================
-# # 便捷创建函数
-# # =============================
-# 
-# def create_box_tracker() -> BoxTracker:
-#     """创建 BoxTracker 实例"""
-#     return BoxTracker()
