@@ -293,7 +293,7 @@ class RuntimeService:
                 self.logger.warning(f"[相机{payload.get('camera_id')}] 收到结果但没有活动轨迹")
                 await self._raise_alarm("NO_ACTIVE_TRACK", "收到扫码结果但没有活动轨迹")
                 return
-            # 构建 CameraResult 对象
+
             camera_result = CameraResult(
                 camera_id=payload.get("camera_id"),
                 code=payload.get("code"),
@@ -302,17 +302,11 @@ class RuntimeService:
                 symbology=payload.get("symbology"),
                 raw_payload=payload,
             )
-            #   1774951546940.0999~
-            #   1774951544042
-            #   1774951547740.0999
-#
             # 绑定结果到轨迹
             track = self.result_binder.bind(camera_result, active_tracks)
 
             if track is None:
                 self.logger.info(f"[相机{payload.get('camera_id')} 无结果")
-                # self.logger.error(f"[相机{payload.get('camera_id')}] 结果无法绑定到任何轨迹")
-                # await self._raise_alarm("UNBOUND_RESULT", f"扫码结果无法绑定: {camera_result.code}")
                 return
 
             else:

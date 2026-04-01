@@ -12,7 +12,7 @@ logging:
   console_color: true
 
 window_tolerance_ms: 50   # 窗口边界容差（毫秒）
-repeat_check_time: 10_000
+repeat_check_time: 7_000
 pe1_to_pe2_dist: 0.30
 pe2_to_camera_dist: 0.36
 
@@ -48,7 +48,3 @@ track:
 
 trigger:
   ttl_ms: 300
-#scheduler:
-#  scan_window: 5.0      # 扫码窗口时间（秒）
-#  max_retries: 3         # 最大重试次数
-#  retry_interval: 0.2    # 重试间隔（秒）
