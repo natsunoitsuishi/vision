@@ -93,7 +93,7 @@ class AppController:
         self.archive_service: Optional[ArchiveService] = None
 
         # UI
-        self.main_window: Optional[MainWindow] = None
+        # self.main_window: Optional[MainWindow] = None
 
         # 后台任务
         self._background_tasks: List[asyncio.Task] = []
@@ -203,7 +203,7 @@ class AppController:
             self.logger.info("MES 客户端已启动")
 
             # 位置推算服务
-            self.archive_service = ArchiveService()
+            self.archive_service = ArchiveService(self.event_bus)
             # await self.archive_service.start()
 
             # 5. 运行时服务层 - 整合所有模块，启动核心业务循环
@@ -244,16 +244,6 @@ class AppController:
             self.state = AppState.FAULT
             await self._handle_startup_failure(e)
             raise
-
-    # async def _init_main_window(self):
-        # """初始化主窗口"""
-        # from ui.main_window import MainWindow
-        #
-        # self.main_window = MainWindow(
-        #     event_bus=self.event_bus,
-        #     runtime_service=self.runtime_service
-        # )
-        # self.main_window.show()
 
     async def _start_runtime(self) -> None:
         """启动运行时服务"""
@@ -326,33 +316,31 @@ class AppController:
         # # 退出 Qt 应用
         # self.qt_app.quit()
 
-    async def restart_runtime(self) -> None:
-        """
-        重启运行时服务（用于配置热更新）
-        """
-        pass
-
-        # self.logger.info("Restarting runtime service...")
-        #
-        # # 停止当前运行时
-        # if self.runtime_service:
-        #     await self.runtime_service.stop()
-        #
-        # # 重新加载配置
-        # await self.config_manager.reload()
-        # self.config = self.config_manager.get_config()
-        #
-        # # 重新初始化依赖配置的组件
-        # await self._init_track_manager()
-        # await self._init_trigger_scheduler()
-        # await self._init_scan_session_controller()
-        # await self._init_result_binder()
-        #
-        # # 重启运行时
-        # await self._init_runtime_service()
-        # await self._start_runtime()
-        #
-        # self.logger.info("Runtime service restarted")
+    # async def restart_runtime(self) -> None:
+    #     """
+    #     重启运行时服务（用于配置热更新）
+    #     """
+    #     self.logger.info("Restarting runtime service...")
+    #
+    #     # 停止当前运行时
+    #     if self.runtime_service:
+    #         await self.runtime_service.stop()
+    #
+    #     # 重新加载配置
+    #     await self.config_manager.reload()
+    #     self.config = self.config_manager.get_config()
+    #
+    #     # 重新初始化依赖配置的组件
+    #     await self._init_track_manager()
+    #     await self._init_trigger_scheduler()
+    #     await self._init_scan_session_controller()
+    #     await self._init_result_binder()
+    #
+    #     # 重启运行时
+    #     await self._init_runtime_service()
+    #     await self._start_runtime()
+    #
+    #     self.logger.info("Runtime service restarted")
 
     def get_state(self) -> AppState:
         """获取当前应用状态"""

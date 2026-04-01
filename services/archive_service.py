@@ -21,9 +21,12 @@ from enum import Enum
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from config.path_config import DEFAULT_DIVERT_UNITS, DEFAULT_PATHS, PathConfig, PathType
+from devices.plc_client import PlcDivertClient
 from domain import TrackStatus
 from domain.models import BoxTrack
 from config.manager import get_config
+from services.event_bus import EventBus
+
 
 @dataclass
 class BoxTrackingData:
@@ -125,7 +128,7 @@ class ArchiveService:
     5. 提供 HTTP 接口供外部系统查询鞋盒位置
     """
 
-    def __init__(self):
+    def __init__(self, event_bus: EventBus = None):
         self.logger = logging.getLogger(__name__)
 
         # ========== 物理参数配置 ==========
@@ -169,10 +172,13 @@ class ArchiveService:
         self._position_task: Optional[asyncio.Task] = None
         self._divert_monitor_task: Optional[asyncio.Task] = None
 
-        # ========== TCP 配置 ==========
-        self._tcp_host = get_config("divert.tcp_host")
-        self._tcp_port = get_config("divert.tcp_port")
-        self._tcp_writer: Optional[asyncio.StreamWriter] = None
+        # # ========== TCP 配置 ==========
+        # self._tcp_host = get_config("divert.tcp_host")
+        # self._tcp_port = get_config("divert.tcp_port")
+        # self._tcp_writer: Optional[asyncio.StreamWriter] = None
+        self._plc_client: Optional[PlcDivertClient] = None
+        self.event_bus = event_bus
+
 
         # ========== 统计信息 ==========
         self._stats = {
@@ -268,8 +274,16 @@ class ArchiveService:
         # 启动摆轮机触发监控循环
         self._divert_monitor_task = asyncio.create_task(self._divert_monitor_loop())
 
-        # 建立 TCP 连接
-        await self._connect_tcp()
+        # # 建立 TCP 连接
+        # await self._connect_tcp()
+
+        # 初始化 PLC 客户端
+        self._plc_client = PlcDivertClient(self.event_bus)
+        try:
+            await self._plc_client.connect()
+            self.logger.info("PLC 摆轮机客户端已启动")
+        except Exception as e:
+            self.logger.error(f"PLC 连接失败: {e}")
 
         self.logger.info(f"BoxTracker 启动完成")
 
@@ -297,63 +311,32 @@ class ArchiveService:
             except asyncio.CancelledError:
                 pass
 
-        # 关闭 TCP 连接
-        if self._tcp_writer:
-            self._tcp_writer.close()
-            try:
-                await self._tcp_writer.wait_closed()
-            except:
-                pass
-
-        # 停止 HTTP 服务器
-        self._stop_http_server()
+        # 关闭 PLC 连接
+        if self._plc_client:
+            await self._plc_client.disconnect()
 
         self.logger.info("BoxTracker 已停止")
 
-    # =============================
-    # TCP 连接管理
-    # =============================
-
-    async def _connect_tcp(self) -> None:
-        """建立 TCP 连接"""
-        try:
-            reader, writer = await asyncio.open_connection(
-                self._tcp_host, self._tcp_port
-            )
-            self._tcp_writer = writer
-            self.logger.info(f"TCP 连接已建立: {self._tcp_host}:{self._tcp_port}")
-        except Exception as e:
-            self.logger.error(f"TCP 连接失败: {e}")
-
-    async def _send_tcp_signal(self, divert_id: int) -> bool:
+    async def _send_divert_signal(self, divert_id: int, direction: int) -> bool:
         """
-        发送 TCP 转向信号到摆轮机
+        发送转向信号到摆轮机
 
         Args:
-            divert_id: 摆轮机ID
+            divert_id: 摆轮机ID（1-4对应方向1-4）
+            direction: 方向编号
 
         Returns:
             是否发送成功
         """
-        # 根据你的实际协议修改格式
-        # 示例格式: {"divert_id": 1, "command": "DIVERT", "timestamp": 123456}
-        message = f"DIVERT,{divert_id},1\n"
-
-        try:
-            if not self._tcp_writer:
-                await self._connect_tcp()
-
-            if self._tcp_writer:
-                self._tcp_writer.write(message.encode())
-                await self._tcp_writer.drain()
-                self.logger.info(f"📡 [TCP] 发送转向信号: 摆轮机 {divert_id}")
+        if self._plc_client and self._plc_client.is_connected:
+            self.logger.info(f"📡 [PLC] 发送转向信号: 摆轮机 {divert_id}, 方向 {direction}")
+            success = await self._plc_client.set_direction(direction)
+            if success:
                 self._stats["tcp_sent"] += 1
-                return True
-        except Exception as e:
-            self.logger.error(f"TCP 发送失败: {e}")
-            self._tcp_writer = None  # 下次重连
-
-        return False
+            return success
+        else:
+            self.logger.warning(f"PLC 未连接，无法发送转向信号")
+            return False
 
     # =============================
     # 位置推算循环
@@ -421,6 +404,25 @@ class ArchiveService:
     # =============================
     # 摆轮机触发监控循环
     # =============================
+    def _get_direction_from_box(self, box: BoxTrackingData) -> Optional[int]:
+        """
+        根据鞋盒信息获取摆轮机方向
+
+        根据通讯地址表：
+        - 方向1: 写入1
+        - 方向2: 写入2
+        - 方向3: 写入3
+        - 方向4: 写入4
+        """
+        # 方式1：使用路径ID
+        if box.path_id:
+            return box.path_id  # 路径ID 1-4 对应方向 1-4
+
+        # 方式2：从最终码值解析
+        # 可以从 track 中获取 final_code
+        # return self._code_to_direction(box.final_code)
+
+        return None
 
     async def _divert_monitor_loop(self) -> None:
         """
@@ -461,11 +463,16 @@ class ArchiveService:
 
                     # 检查是否到达触发点
                     if current_pos >= trigger_pos:
+                        direction = self._get_direction_from_box(box)
+
                         self.logger.info(f"🔔 [触发] 鞋盒 {box.track_id} 到达摆轮机 {box.target_divert_id} 前500mm, "
                                          f"当前位置={current_pos:.1f}mm, 触发位置={trigger_pos:.1f}mm")
 
-                        # 发送 TCP 信号
-                        success = await self._send_tcp_signal(box.target_divert_id)
+                        # 发送 PLC 信号
+                        success = await self._send_divert_signal(
+                            box.target_divert_id,
+                            direction
+                        )
 
                         if success:
                             box.tcp_sent = True

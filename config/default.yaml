@@ -39,9 +39,19 @@ mes:
   host: 127.0.0.1
   port: 9090
 
+# 摆轮机PLC配置
 divert:
-  tcp_host: "192.168.1.100"
-  tcp_port: 8888
+  tcp_host: "192.168.12.200"  # PLC IP地址
+  tcp_port: 502                # PLC端口
+  # 地址映射
+  registers:
+    direction: 0x0000          # D0 寄存器地址（方向控制）
+  # 方向值映射（根据PLC协议）
+  direction_values:
+    1: 1    # 方向1
+    2: 2    # 方向2
+    3: 3    # 方向3
+    4: 4    # 方向4
 
 track:
   timeout_ms: 5000

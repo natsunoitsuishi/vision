@@ -32,13 +32,10 @@ pydantic
 pydantic_core
 Pygments
 pymodbus
-PySide2
 pytest
 pytest-asyncio
 PyYAML
 qasync
-shiboken2
-shiboken6
 starlette
 tomli
 typing-inspection
