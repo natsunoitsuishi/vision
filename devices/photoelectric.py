@@ -287,12 +287,12 @@ if __name__ == '__main__':
     async def main():
         await load_config()
 
-        IP = get_config("photoelectric.host", "192.168.1.117")
+        ip = get_config("photoelectric.host")
 
-        PORT = get_config("photoelectric.port")
+        port = get_config("photoelectric.port")
 
         # 建立连接
-        client = ModbusTcpClient(IP, port=502)
+        client = ModbusTcpClient(ip, port=502)
         client.connect()
 
         while True:

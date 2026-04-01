@@ -272,8 +272,8 @@ async def test_with_real_config():
     print(f"   MES 启用: {mes_enabled}")
 
     if scheduler_enabled:
-        scheduler_host = get_config("scheduler.host", "127.0.0.1")
-        scheduler_port = get_config("scheduler.port", 8080)
+        scheduler_host = get_config("scheduler_client.host")
+        scheduler_port = get_config("scheduler_client.port")
         print(f"   调度上位机地址: {scheduler_host}:{scheduler_port}")
 
         client = SchedulerClient(
@@ -298,8 +298,8 @@ async def test_with_real_config():
         print("\n调度上位机未启用，跳过测试")
 
     if mes_enabled:
-        mes_host = get_config("mes.host", "127.0.0.1")
-        mes_port = get_config("mes.port", 9090)
+        mes_host = get_config("mes.host")
+        mes_port = get_config("mes.port")
         print(f"   MES 地址: {mes_host}:{mes_port}")
 
         client = MesClient(

@@ -11,6 +11,7 @@ logging:
   console_enabled: true
   console_color: true
 
+window_tolerance_ms: 50   # 窗口边界容差（毫秒）
 repeat_check_time: 10_000
 pe1_to_pe2_dist: 0.30
 pe2_to_camera_dist: 0.36
@@ -19,6 +20,7 @@ camera:
   host: 192.168.1.79
   trigger_port: 1025
   read_port: 1024
+  timeout: 3.0
   delay: 400
 
 photoelectric:

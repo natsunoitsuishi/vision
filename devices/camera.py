@@ -36,10 +36,10 @@ class BaseCameraClient(ABC):
 
         self._fetch_task: Optional[asyncio.Task] = None
 
-        self.host = get_config("camera.host", "192.168.1.79")
-        self.port = get_config("camera.port", 1024)
-        self.trigger_port = get_config("camera.trigger_port", 1025)
-        self.timeout = get_config("camera.timeout", 3.0)
+        self.host = get_config("camera.host")
+        self.port = get_config("camera.read_port")
+        self.trigger_port = get_config("camera.trigger_port")
+        self.timeout = get_config("camera.timeout")
 
         self._reader: Optional[asyncio.StreamReader] = None
         self._writer: Optional[asyncio.StreamWriter] = None
@@ -108,7 +108,7 @@ def _parse_to_camera_result(data: dict) -> CameraResult:
         result=data.get("result", "FALSE"),
         code=data.get("code", ""),
         symbology=data.get("symbology", ""),
-        ts_ms=time.time_ns() / 1_000_000 - get_config("camera.delay", 400),
+        ts_ms=time.time_ns() / 1_000_000 - get_config("camera.delay"),
     )
 
 class OptCameraClient(BaseCameraClient):

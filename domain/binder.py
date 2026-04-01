@@ -109,7 +109,7 @@ class ResultBinder:
         Args:
             config: 配置字典，包含时间窗容差等参数
         """
-        self._window_tolerance_ms = get_config("window_tolerance_ms", 50)  # 窗口边界容差（毫秒）
+        self._window_tolerance_ms = get_config("window_tolerance_ms")
         self._logger = get_logger(__name__)
 
         # 统计信息
