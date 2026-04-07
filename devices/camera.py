@@ -173,7 +173,6 @@ class OptCameraClient(BaseCameraClient):
                     data = json.loads(buffer.decode().strip())
                     await self._handle_message(data)
                 except json.JSONDecodeError:
-                    # self.logger.error("Json Failed ...")
                     continue
 
             except asyncio.TimeoutError:
@@ -207,7 +206,6 @@ class OptCameraClient(BaseCameraClient):
 
     def is_connected(self):
         return self._connected
-
 
 # 运行验证
 # if __name__ == "__main__":
@@ -303,30 +301,28 @@ class OptCameraClient(BaseCameraClient):
 #             if self.client and self.client.connected:
 #                 await self.client.close()
 #
-
-    # # ------------------------------
-    # # 测试入口
-    # # ------------------------------
-    # async def main():
-    #     trigger = OptCameraHardwareTrigger(reader_ip="192.168.1.79")
-    #     print("📡 等待硬件触发（DI_0 上升沿）...")
-    #     try:
-    #         while True:
-    #             result = await trigger.wait_for_trigger()
-    #             print(result)
-    #             if result:
-    #                 if result["success"]:
-    #                     print(f"✅ 解码成功: {result['code']}")
-    #                 else:
-    #                     print("❌ 触发成功但解码失败")
-    #     except KeyboardInterrupt:
-    #         print("\n🛑 停止监控")
-    #     finally:
-    #         await trigger.close()
-    #
-    #
-    # if __name__ == "__main__":
-    #     asyncio.run(main())
+# # ------------------------------
+# # 测试入口
+# # ------------------------------
+# async def main():
+#     trigger = OptCameraHardwareTrigger(reader_ip="192.168.1.79")
+#     print("📡 等待硬件触发（DI_0 上升沿）...")
+#     try:
+#         while True:
+#             result = await trigger.wait_for_trigger()
+#             print(result)
+#             if result:
+#                 if result["success"]:
+#                     print(f"✅ 解码成功: {result['code']}")
+#                 else:
+#                     print("❌ 触发成功但解码失败")
+#     except KeyboardInterrupt:
+#         print("\n🛑 停止监控")
+#     finally:
+#         await trigger.close()
+#
+# if __name__ == "__main__":
+#     asyncio.run(main())
 
 if __name__ == "__main__":
     import socket
@@ -335,21 +331,22 @@ if __name__ == "__main__":
 
     def main():
         camera_ip = "192.168.1.79"
-        PORT_TRIGGER = 1025  # 触发端口
-        PORT_READ = 1024  # 读码端口
-        TRIGGER_CMD = b"start"
-        STOP_CMD = b"stop"
+        port_trigger = 1025     # 触发端口
+        port_read = 1024        # 读码端口
+        trigger_cmd = b"start"
+
+        stop_cmd = b"stop"
+        log_file = "log.txt"
 
         # 日志文件
-        LOG_FILE = "log.txt"
         # 条码完整规则：1→2→3→4→5→6 循环
         # =================================================================
-
         # 1. 先发送一次触发指令
+
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((camera_ip, PORT_TRIGGER))
-                s.sendall(TRIGGER_CMD)
+                s.connect((camera_ip, port_trigger))
+                s.sendall(trigger_cmd)
                 print("✅ 已发送拍照触发指令")
         except Exception as e:
             print(f"❌ 触发失败: {e}")
@@ -360,11 +357,12 @@ if __name__ == "__main__":
         print("开始读取条码...\n")
 
         # 2. 长连接读取（不再反复断开重连，超级稳定）
+
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s_read:
                 s_read.settimeout(5)
-                s_read.connect((camera_ip, PORT_READ))
-                print(f"✅ 已连接读码端口 {PORT_READ}，持续监听中...\n")
+                s_read.connect((camera_ip, port_read))
+                print(f"✅ 已连接读码端口 {port_read}，持续监听中...\n")
 
                 while True:
                     try:

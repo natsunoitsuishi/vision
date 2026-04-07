@@ -14,10 +14,8 @@ def _has_device_fault(track_data: BoxTrack) -> bool:
     for result_data in track_data.camera_results:
         if hasattr(result_data, 'error_msg') and result_data.error_msg and "设备异常" in result_data.error_msg:
             return True
-
     # 检查是否缺少相机连接
     # 这里可以根据实际情况添加更多检测
-
     return False
 
 

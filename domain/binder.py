@@ -10,7 +10,6 @@ from config import get_config
 from .enums import DecisionStatus
 from .models import BoxTrack, CameraResult
 
-
 def resolve_final_code(track: BoxTrack) -> Tuple[Optional[str], Optional[DecisionStatus]]:
     """
     解析轨迹的最终码值和状态
@@ -103,12 +102,7 @@ class ResultBinder:
     """
 
     def __init__(self):
-        """
-        初始化结果绑定器
 
-        Args:
-            config: 配置字典，包含时间窗容差等参数
-        """
         self._window_tolerance_ms = get_config("window_tolerance_ms")
         self._logger = get_logger(__name__)
 

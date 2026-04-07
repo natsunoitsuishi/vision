@@ -107,7 +107,6 @@ class RuntimeService:
     # =============================
     # 生命周期管理
     # =============================
-
     async def start(self) -> None:
         """启动运行时服务"""
         if self._running:
@@ -243,11 +242,13 @@ class RuntimeService:
             await self._notify_ui_window_opened(track)
 
     async def _on_pe_fall(self, event: AppEvent) -> None:
+
         """
         处理 PE 下降沿事件
 
         PE1 下降沿：准备关闭窗口
         """
+
         sensor = event.payload.get("sensor")
         ts = event.payload.get("ts", time.time_ns() / 1_000_000)
 
@@ -260,9 +261,11 @@ class RuntimeService:
                 self.logger.debug("[PE1下降] 没有打开的轨迹窗口")
 
     async def _on_camera_result(self, event: AppEvent) -> None:
+
         """
-            处理相机结果事件
+        处理相机结果事件
         """
+
         payload = event.payload
         if payload.get("result") == "TRUE":
             self.logger.info(f"[_on_camera_result] 收到事件负载, "
@@ -280,7 +283,7 @@ class RuntimeService:
             if result_key in self._processed_results:
                 last_ts = self._processed_time
                 if current_ts - last_ts <= get_config("repeat_check_time"):
-                    self.logger.info(f"重复结果（{current_ts - last_ts:.0f}ms内），忽略: {result_key}")
+                    self.logger.info(f"重复结果（{current_ts - last_ts:.10f}ms内），忽略: {result_key}")
                     return
                 else:
                     # 超过300ms，允许重新处理（更新缓存）
@@ -335,11 +338,11 @@ class RuntimeService:
 
             if len(track.camera_results) >= 1:
                 # 调用决策引擎判定
-
                 track.final_status = self.decision_engine.evaluate(track)
 
                 # 设置最终码值
                 successful = [r for r in track.camera_results if r.result == "TRUE"]
+
                 track.final_code = successful[0].code if successful else None
 
                 self.logger.info(f"[相机{payload.get('camera_id')}] 轨迹 {track.track_id} 判定完成: {track.final_status.value}")
@@ -355,6 +358,7 @@ class RuntimeService:
 
         else:
             self.logger.info(f"get UNKNOWN")
+
     async def _on_camera_heartbeat(self, event: AppEvent) -> None:
         """处理相机心跳事件"""
         camera_id = event.payload.get("camera_id")
