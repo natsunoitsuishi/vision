@@ -263,22 +263,22 @@ class PhotoelectricClient:
         """是否已连接"""
         return self._connected
 
-    # async def write_coil(self, can_name, is_enable):
-    #     await self._client.write_coil(0 if can_name == "cam1_enable" else 1, is_enable)
-    #
-    # async def _write_coil(self, address: int, value: bool) -> None:
-    #     if not self._connected or not self._client:
-    #         raise RuntimeError("Modbus 未连接")
-    #
-    #     try:
-    #         result = await self._client.write_coil(address, value)
-    #
-    #         if result.isError():
-    #             raise ModbusException(f"写入线圈失败: {result}")
-    #
-    #     except Exception as e:
-    #         self.logger.error(f"写入线圈失败: address={address}, value={value}, error={e}")
-    #         raise
+# async def write_coil(self, can_name, is_enable):
+#     await self._client.write_coil(0 if can_name == "cam1_enable" else 1, is_enable)
+#
+# async def _write_coil(self, address: int, value: bool) -> None:
+#     if not self._connected or not self._client:
+#         raise RuntimeError("Modbus 未连接")
+#
+#     try:
+#         result = await self._client.write_coil(address, value)
+#
+#         if result.isError():
+#             raise ModbusException(f"写入线圈失败: {result}")
+#
+#     except Exception as e:
+#         self.logger.error(f"写入线圈失败: address={address}, value={value}, error={e}")
+#         raise
 
 if __name__ == '__main__':
     from pymodbus.client import ModbusTcpClient

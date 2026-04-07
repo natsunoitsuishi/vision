@@ -204,7 +204,7 @@ class AppController:
             self.logger.info("MES 客户端已启动")
 
             # 位置推算服务
-            self.archive_service = ArchiveService(self.event_bus)
+            self.archive_service = ArchiveService()
             # await self.archive_service.start()
 
             # 5. 运行时服务层 - 整合所有模块，启动核心业务循环

@@ -167,7 +167,7 @@ class OptCameraClient(BaseCameraClient):
                     if not chunk:
                         raise ConnectionError("连接断开")
                     buffer += chunk
-                    if b"}" in chunk:  # JSON 结束符
+                    if b"}" in chunk:
                         break
                 try:
                     data = json.loads(buffer.decode().strip())
@@ -369,11 +369,11 @@ if __name__ == "__main__":
                         # 【关键修复】接收完整数据，解决分段/粘包
                         buffer = b""
                         while True:
-                            chunk = s_read.recv(1024)
+                            chunk = s_read.recv(2048)
                             if not chunk:
                                 raise ConnectionError("连接断开")
                             buffer += chunk
-                            if b"}" in chunk:  # JSON 结束符
+                            if b"}" in chunk:
                                 break
 
                         # 解析
