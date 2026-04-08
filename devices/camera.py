@@ -82,7 +82,7 @@ class BaseCameraClient(ABC):
             )
 
     def _update_health(self, status: DeviceStatus, message: str = ""):
-        now_ms = time.time_ns() // 1_000_000
+        now_ms = time.time_ns() / 1_000_000
 
         self._health.status = status
         self._health.message = message

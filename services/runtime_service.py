@@ -24,7 +24,6 @@ from infra.db.repository import SQLiteRepository
 from services import ArchiveService
 from services.event_bus import EventBus
 
-
 class RuntimeService:
     """
     运行时服务 - 统一协调所有业务模块
@@ -472,9 +471,9 @@ class RuntimeService:
             self.logger.error(f"超时 PLC 控制失败: {e}")
 
     async def _on_device_fault(self, event: AppEvent) -> None:
+        """处理设备故障事件"""
 
         print("Hello, World !!!")
-        """处理设备故障事件"""
         device_id = event.payload.get("device_id")
         device_type = event.payload.get("device_type")
         message = event.payload.get("message", "")

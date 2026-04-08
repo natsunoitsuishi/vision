@@ -23,17 +23,18 @@ def to_plc(addr: int, value: int):
     client_plc.close()
 
 if __name__ == '__main__':
+
     str_count = "4321"
 
     async def handle_trigger(trigger_count: int):
 
-        # 第1次
+        # 第 1 次
         if trigger_count == 1:
             await asyncio.sleep(T_D0)
             to_plc(D0_ADDR, 1)
             print("Hello 1")
 
-        # 第2次
+        # 第 2 次
         elif trigger_count == 2:
             await asyncio.sleep(T_D0)
             to_plc(D0_ADDR, 2)
@@ -43,7 +44,7 @@ if __name__ == '__main__':
             to_plc(D1_ADDR, 2)
             print("Hello 2")
 
-        # 第3次
+        # 第 3 次
         elif trigger_count == 3:
             await asyncio.sleep(T_D0)
             to_plc(D0_ADDR, 3)
@@ -53,7 +54,7 @@ if __name__ == '__main__':
             to_plc(D1_ADDR, 3)
             print("Hello 3")
 
-        # 第4次
+        # 第 4 次
         elif trigger_count == 4:
             await asyncio.sleep(T_D0)
             to_plc(D0_ADDR, 4)
