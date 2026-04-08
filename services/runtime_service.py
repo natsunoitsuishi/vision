@@ -388,15 +388,15 @@ class RuntimeService:
         except Exception as e:
             self.logger.error(f"PLC 控制失败: {e}")
 
-    async def _plc_handle_trigger(self, trigger_count: int):
+    async def _plc_handle_trigger(self, trigger_count: int, time_out: float = 0):
         """PLC 控制逻辑（从你的代码移植）"""
         # 配置参数
         plc_ip = "192.168.1.200"
         plc_port = 502
         d0_addr = 0
         d1_addr = 1
-        t_d0 = 1.788  # 到 D0 摆轮机的延迟
-        t_d1 = 3.436  # 到 D1 摆轮机的延迟
+        t_d0 = 1.788 - time_out         # 到 D0 摆轮机的延迟
+        t_d1 = 3.436 - time_out         # 到 D1 摆轮机的延迟
 
         def to_plc(addr: int, value: int):
             from pymodbus.client import ModbusTcpClient

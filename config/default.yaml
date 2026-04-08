@@ -25,7 +25,7 @@ camera:
 
 photoelectric:
   host: 192.168.1.117
-  port: 500
+  port: 501
   timeout: 3.0
 
 scheduler_client:
