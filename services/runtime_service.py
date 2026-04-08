@@ -458,8 +458,22 @@ class RuntimeService:
             track.final_status = DecisionStatus.TIMEOUT
             self.stats["timeout_count"] += 1
 
+            # 超时应该推送到通道4（合单机）
+            await self._execute_plc_control_on_timeout(track)
+
             await self._output_result(track)
             self.logger.warning(f"轨迹超时: {track_id}")
+
+    async def _execute_plc_control_on_timeout(self, track: BoxTrack) -> None:
+        """超时时执行 PLC 控制（推送到通道4）"""
+        try:
+            # 超时一律推送到通道4（合单机）
+            trigger_count = 4
+            print(f"⏰ 轨迹超时: {track.track_id} -> 推送到合单机(通道4)")
+            asyncio.create_task(self._plc_handle_trigger(trigger_count))
+        except Exception as e:
+            self.logger.error(f"超时 PLC 控制失败: {e}")
+
 
     async def _on_device_fault(self, event: AppEvent) -> None:
         """处理设备故障事件"""
@@ -491,8 +505,9 @@ class RuntimeService:
             "finalized_ts": time.time()
         })
 
-        ## 上报到调度系统
-        ## 上报到调度上位机
+## 上报到调度系统
+## 上报到调度上位机
+
         if self.scheduler_client and self.scheduler_client.is_connected:
             report_payload = {
                 "track_id": track.track_id,
@@ -555,6 +570,7 @@ class RuntimeService:
                 expired_tracks = self.track_manager.cleanup_expired(now_ms)
 
                 for track in expired_tracks:
+                    await self._execute_plc_control_on_timeout(track)
                     self.logger.warning(f"清理超时轨迹: {track.track_id}")
                     await self._output_result(track)
 
