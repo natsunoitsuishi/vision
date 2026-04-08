@@ -43,14 +43,14 @@ class BoxTrackingData:
     track_id: str
 
     # 位置信息（来自 ArchiveService）
-    current_pos_mm: float = 0.0  # 当前位置（毫米，以 PE1 为原点）
-    speed_mm_s: float = 0.0  # 当前速度（毫米/秒）
-    last_update_ms: float = 0.0  # 最后更新时间
-    has_exited: bool = False  # 是否已离开
-    created_ms: float = 0.0  # 创建时间
-    pe1_on_ms: float = 0.0  # PE1 触发时间
-    pe2_on_ms: float = 0.0  # PE2 触发时间
-    length_mm: float = 0.0  # 鞋盒长度（估算）
+    current_pos_mm: float = 0.0         # 当前位置（毫米，以 PE1 为原点）
+    speed_mm_s: float = 0.0             # 当前速度（毫米/秒）
+    last_update_ms: float = 0.0         # 最后更新时间
+    has_exited: bool = False            # 是否已离开
+    created_ms: float = 0.0             # 创建时间
+    pe1_on_ms: float = 0.0              # PE1 触发时间
+    pe2_on_ms: float = 0.0              # PE2 触发时间
+    length_mm: float = 0.0              # 鞋盒长度（估算）
 
     # 路径规划信息（来自 PathPlanner）
     path_id: int = -1  # 目标路径ID（-1表示未分配）
@@ -200,6 +200,90 @@ class ArchiveService:
 
         self.logger.info(f"BoxTracker 初始化完成: PE1={self.pe1_pos_mm}mm, "
                          f"PE2={self.pe2_pos_mm}mm, 相机={self.camera_pos_mm}mm")
+
+    def get_queue_status(self) -> dict:
+        """
+        获取队列状态（用于 UI 显示）
+
+        Returns:
+            包含队列状态的字典
+        """
+        now_ms = time.time_ns() / 1_000_000
+
+        queue_items = []
+        for box in self._active_boxes.values():
+            if box.has_exited:
+                continue
+
+            # 实时计算最新位置
+            elapsed_s = (now_ms - box.last_update_ms) / 1000.0
+            current_pos = box.current_pos_mm + (box.speed_mm_s * elapsed_s)
+
+            queue_items.append({
+                "position": current_pos,
+                "track_id": box.track_id,
+                "speed": box.speed_mm_s,
+                "status": box.status.value,
+                "target_divert": box.target_divert_id,
+                "path_id": box.path_id
+            })
+
+        # 按位置排序（从小到大）
+        queue_items.sort(key=lambda x: x["position"])
+
+        return {
+            "active_count": len(self._active_boxes),
+            "finished_count": len(self._finished_boxes),
+            "total_boxes": self._stats["total_boxes"],
+            "exited_count": self._stats["exited_count"],
+            "queue": queue_items,
+            "head_box": queue_items[-1] if queue_items else None,
+            "tail_box": queue_items[0] if queue_items else None
+        }
+
+    def print_queue(self) -> None:
+        """打印队列状态到日志（用于调试）"""
+        if not self._active_boxes:
+            self.logger.debug("队列为空")
+            return
+
+        now_ms = time.time_ns() / 1_000_000
+
+        # 构建队列信息
+        queue_info = []
+        for box in self._active_boxes.values():
+            if box.has_exited:
+                continue
+
+            elapsed_s = (now_ms - box.last_update_ms) / 1000.0
+            current_pos = box.current_pos_mm + (box.speed_mm_s * elapsed_s)
+
+            queue_info.append({
+                "track_id": box.track_id[-12:],  # 只显示后12位
+                "pos": round(current_pos, 1),
+                "speed": round(box.speed_mm_s, 1),
+                "status": box.status.value[:3],  # 缩写
+                "divert": box.target_divert_id
+            })
+
+        queue_info.sort(key=lambda x: x["pos"])
+
+        # 格式化成表格
+        header = f"{'Track ID':<14} {'Pos(mm)':<10} {'Speed':<8} {'St':<4} {'Divert':<6}"
+        separator = "-" * 50
+
+        self.logger.info(f"\n📊 队列状态 [{len(queue_info)} 个鞋盒]:")
+        self.logger.info(separator)
+        self.logger.info(header)
+        self.logger.info(separator)
+
+        for item in queue_info:
+            self.logger.info(
+                f"{item['track_id']:<14} {item['pos']:<10.1f} {item['speed']:<8.1f} "
+                f"{item['status']:<4} {item['divert'] if item['divert'] else '-':<6}"
+            )
+
+        self.logger.info(separator)
 
     # =============================
     # 生命周期管理

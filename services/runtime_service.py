@@ -347,7 +347,8 @@ class RuntimeService:
 
                 self.logger.info(f"[相机{payload.get('camera_id')}] 轨迹 {track.track_id} 判定完成: {track.final_status.value}")
 
-                self.archive_service.handle_scan_result(track.track_id, camera_result.code)
+                # self.archive_service.handle_scan_result(track.track_id, camera_result.code)
+                await self._execute_plc_control(track)
 
                 # 输出结果
                 await self._output_result(track)
@@ -358,6 +359,77 @@ class RuntimeService:
 
         else:
             self.logger.info(f"get UNKNOWN")
+
+    async def _execute_plc_control(self, track: BoxTrack):
+        """绑定完成后立即执行 PLC 控制"""
+        if not track.final_code:
+            return
+
+        try:
+            # 根据码值计算触发次数
+            code_num = int(track.final_code) % 4 + 1  # 1-4
+            trigger_count = code_num
+
+            self.logger.info(f"🎯 绑定完成，立即执行 PLC 控制: 码值={track.final_code}, 触发次数={trigger_count}")
+
+            # 调用你的 PLC 控制逻辑
+            # await self._plc_handle_trigger(trigger_count)
+
+            asyncio.create_task(self._plc_handle_trigger(trigger_count))
+
+        except Exception as e:
+            self.logger.error(f"PLC 控制失败: {e}")
+
+    async def _plc_handle_trigger(self, trigger_count: int):
+        """PLC 控制逻辑（从你的代码移植）"""
+        # 配置参数
+        plc_ip = "192.168.1.200"
+        plc_port = 502
+        d0_addr = 0
+        d1_addr = 1
+        t_d0 = 1.788  # 到 D0 摆轮机的延迟
+        t_d1 = 3.436  # 到 D1 摆轮机的延迟
+
+        def to_plc(addr: int, value: int):
+            from pymodbus.client import ModbusTcpClient
+            client = ModbusTcpClient(plc_ip, port=plc_port)
+            client.connect()
+            client.write_register(addr, value)
+            client.close()
+            print(f"📡 PLC 写入: 寄存器={addr}, 值={value}")
+
+        # 根据触发次数执行
+        if trigger_count == 1:
+            await asyncio.sleep(t_d0)
+            # to_plc(d0_addr, 1)
+            print("✅ PLC 触发 1: D0=1")
+
+        elif trigger_count == 2:
+            await asyncio.sleep(t_d0)
+            # to_plc(d0_addr, 2)
+            print("✅ PLC 触发 2: D0=2")
+
+            await asyncio.sleep(t_d1 - t_d0)
+            # to_plc(d1_addr, 2)
+            print("✅ PLC 触发 2: D1=2")
+
+        elif trigger_count == 3:
+            await asyncio.sleep(t_d0)
+            # to_plc(d0_addr, 3)
+            print("✅ PLC 触发 3: D0=3")
+
+            await asyncio.sleep(t_d1 - t_d0)
+            # to_plc(d1_addr, 3)
+            print("✅ PLC 触发 3: D1=3")
+
+        elif trigger_count == 4:
+            await asyncio.sleep(t_d0)
+            # to_plc(d0_addr, 4)
+            print("✅ PLC 触发 4: D0=4")
+
+            await asyncio.sleep(t_d1 - t_d0)
+            # to_plc(d1_addr, 4)
+            print("✅ PLC 触发 4: D1=4")
 
     async def _on_camera_heartbeat(self, event: AppEvent) -> None:
         """处理相机心跳事件"""

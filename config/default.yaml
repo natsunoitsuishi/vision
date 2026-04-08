@@ -21,7 +21,7 @@ camera:
   trigger_port: 1025
   read_port: 1024
   timeout: 3.0
-  delay: 400
+  delay: 4400
 
 photoelectric:
   host: 192.168.1.117
@@ -54,7 +54,7 @@ divert:
     4: 4    # 方向4
 
 track:
-  timeout_ms: 5000
+  timeout_ms: 10000
 
 trigger:
   ttl_ms: 300

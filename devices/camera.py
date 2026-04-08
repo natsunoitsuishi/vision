@@ -331,8 +331,8 @@ if __name__ == "__main__":
 
     def main():
         camera_ip = "192.168.1.79"
-        port_trigger = 1025     # 触发端口
-        port_read = 1024        # 读码端口
+        port_trigger    = 1025     # 触发端口
+        port_read       = 1024        # 读码端口
         trigger_cmd = b"start"
 
         stop_cmd = b"stop"
