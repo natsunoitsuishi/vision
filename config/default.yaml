@@ -21,7 +21,7 @@ camera:
   trigger_port: 1025
   read_port: 1024
   timeout: 3.0
-  delay: 4400
+  delay: 3500
 
 photoelectric:
   host: 192.168.1.117
@@ -41,11 +41,13 @@ mes:
 
 # 摆轮机PLC配置
 divert:
-  tcp_host: "127.0.0.1"         # PLC IP地址
-  tcp_port: 8888                # PLC端口
+  tcp_host: "192.168.1.200"           # PLC IP地址
+  tcp_port: 502                       # PLC端口
   # 地址映射
   registers:
-    direction: 0x0000          # D0 寄存器地址（方向控制）
+    d0_direction: 0x0000          # D0 寄存器地址（方向控制）
+    d1_direction: 0x0001          # D1 寄存器地址（方向控制）
+
   # 方向值映射（根据PLC协议）
   direction_values:
     1: 1    # 方向1

@@ -390,9 +390,6 @@ class RuntimeService:
 
     async def _plc_handle_trigger(self, trigger_count: int, time_out: float = 0):
         """PLC 控制逻辑（从你的代码移植）"""
-        # 配置参数
-        plc_ip = "192.168.1.200"
-        plc_port = 502
         d0_addr = 0
         d1_addr = 1
         t_d0 = 1.788 - time_out         # 到 D0 摆轮机的延迟
@@ -400,7 +397,7 @@ class RuntimeService:
 
         def to_plc(addr: int, value: int):
             from pymodbus.client import ModbusTcpClient
-            client = ModbusTcpClient(plc_ip, port=plc_port)
+            client = ModbusTcpClient(get_config("divert.tcp_host"), port=get_config("divert.tcp_port"))
             client.connect()
             client.write_register(addr, value)
             client.close()
