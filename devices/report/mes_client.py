@@ -1,6 +1,7 @@
 """
 MES 适配客户端
 """
+
 import asyncio
 import logging
 from typing import Optional

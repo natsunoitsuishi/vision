@@ -471,8 +471,9 @@ class RuntimeService:
         except Exception as e:
             self.logger.error(f"超时 PLC 控制失败: {e}")
 
-
     async def _on_device_fault(self, event: AppEvent) -> None:
+
+        print("Hello, World !!!")
         """处理设备故障事件"""
         device_id = event.payload.get("device_id")
         device_type = event.payload.get("device_type")
@@ -502,8 +503,8 @@ class RuntimeService:
             "finalized_ts": time.time()
         })
 
-## 上报到调度系统
-## 上报到调度上位机
+        ## 上报到调度系统
+        ## 上报到调度上位机
 
         if self.scheduler_client and self.scheduler_client.is_connected:
             report_payload = {
