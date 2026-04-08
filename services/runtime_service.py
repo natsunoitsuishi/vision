@@ -365,12 +365,20 @@ class RuntimeService:
         if not track.final_code:
             return
 
-        try:
-            # 根据码值计算触发次数
-            code_num = int(track.final_code) % 4 + 1  # 1-4
-            trigger_count = code_num
+        trigger_count = 4
 
-            self.logger.info(f"🎯 绑定完成，立即执行 PLC 控制: 码值={track.final_code}, 触发次数={trigger_count}")
+        try:
+            is_success = track.final_status == DecisionStatus.OK
+
+            if is_success:
+                # 成功：根据码值计算目标通道 (1-4)
+                code_num = int(track.final_code) % 4
+                trigger_count = code_num if code_num != 0 else 4
+                print(f"✅ 扫码成功: {track.final_code} -> 通道 {trigger_count}")
+            else:
+                # 失败：全部推到通道4（合单机）
+                trigger_count = 4
+                print(f"❌ 扫码失败: {track.final_status.value} -> 推送到合单机(通道4)")
 
             # 调用你的 PLC 控制逻辑
             # await self._plc_handle_trigger(trigger_count)
